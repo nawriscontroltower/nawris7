@@ -2009,7 +2009,7 @@ async function clearAllShipments(){
   if(!confirm('🚨 تحذير خطير!\nهل تريد مسح كل الطرود من قاعدة البيانات؟\nهذا الإجراء لا يمكن التراجع عنه!'))return;
   if(!confirm('⚠️ تأكيد أخير — سيتم مسح كل الطرود نهائياً!'))return;
   try{
-    const r=await fetch(`${SB}/rest/v1/shipments?id=gt.0`,{
+    const r=await fetch(`${SB}/rest/v1/shipments?id=not.is.null`,{
       method:'DELETE',
       headers:{...H,'Prefer':'return=representation'}
     });
