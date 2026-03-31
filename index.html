@@ -816,22 +816,26 @@ async function sb(table,method='GET',body=null,params=''){
   if(!r.ok){const e=await r.text();throw new Error(e);}
   return method==='GET'?r.json():true;
 }
-async function sbAll(table,params=''){
-  let all=[],page=0;
+async function sbAll(table,baseParams=''){
+  let all=[];
   const batchSize=1000;
-  while(true){
-    const sep=params.includes('?')?'&':'?';
-    const r=await fetch(`${SB}/rest/v1/${table}${params}${sep}limit=${batchSize}&offset=${page*batchSize}`,{headers:H});
-    if(!r.ok){
-      // If 416 range error, we've gone past the end
-      if(r.status===416)break;
-      const e=await r.text();throw new Error(e);
+  for(let page=0;;page++){
+    const url=new URL(`${SB}/rest/v1/${table}`);
+    // Parse existing params
+    if(baseParams){
+      const qIdx=baseParams.indexOf('?');
+      const paramStr=qIdx>=0?baseParams.substring(qIdx+1):baseParams;
+      paramStr.split('&').forEach(p=>{if(p){const [k,v]=p.split('=');if(k)url.searchParams.set(k,v||'');}});
     }
+    url.searchParams.set('limit',batchSize);
+    url.searchParams.set('offset',page*batchSize);
+    const r=await fetch(url.toString(),{headers:H});
+    if(r.status===416)break;
+    if(!r.ok){const e=await r.text();throw new Error(e);}
     const batch=await r.json();
-    if(!batch.length)break;
+    if(!batch||!batch.length)break;
     all=all.concat(batch);
     if(batch.length<batchSize)break;
-    page++;
   }
   return all;
 }
