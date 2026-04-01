@@ -2118,6 +2118,30 @@ async function uploadShipments(rows,forceStatus){
 // ══════════════════════════════════════════
 // API INTEGRATION
 // ══════════════════════════════════════════
+// CORS proxy for external APIs
+function proxyUrl(url){
+  // Use allorigins as CORS proxy
+  return 'https://api.allorigins.win/raw?url='+encodeURIComponent(url);
+}
+async function apiFetch(url,token){
+  // First try direct
+  const headers={'Accept':'application/json'};
+  if(token){
+    headers['Authorization']=token.startsWith('Bearer ')?token:'Bearer '+token;
+    headers['Api-Token']=token.replace(/^Bearer\s*/i,'');
+    headers['api-token']=token.replace(/^Bearer\s*/i,'');
+    headers['X-Api-Key']=token.replace(/^Bearer\s*/i,'');
+  }
+  try{
+    const r=await fetch(url,{method:'GET',headers});
+    if(r.ok)return r;
+  }catch(e){}
+  // If direct fails (CORS), use proxy — append token to URL
+  const sep=url.includes('?')?'&':'?';
+  const urlWithToken=token?url+sep+'api_token='+encodeURIComponent(token.replace(/^Bearer\s*/i,'')):url;
+  const r2=await fetch(proxyUrl(urlWithToken));
+  return r2;
+}
 async function testAPI(){
   const url=document.getElementById('api-url')?.value?.trim();
   const token=document.getElementById('api-token')?.value?.trim();
@@ -2125,14 +2149,7 @@ async function testAPI(){
   if(!url){toast('أدخل رابط API','e');return;}
   el.textContent='⏳ جارٍ الاختبار...';
   try{
-    const headers={'Accept':'application/json'};
-    if(token){
-      headers['Authorization']=token.startsWith('Bearer ')?token:'Bearer '+token;
-      headers['Api-Token']=token.replace(/^Bearer\s*/i,'');
-      headers['api-token']=token.replace(/^Bearer\s*/i,'');
-      headers['X-Api-Key']=token.replace(/^Bearer\s*/i,'');
-    }
-    const res=await fetch(url,{method:'GET',headers});
+    const res=await apiFetch(url,token);
     if(res.ok){
       const data=await res.json();
       const count=Array.isArray(data)?data.length:data?.data?.length||data?.results?.length||data?.orders?.length||'?';
@@ -2153,14 +2170,7 @@ async function fetchFromAPI(){
   if(!url){toast('أدخل رابط API أولاً','e');return;}
   el.textContent='⏳ جارٍ جلب البيانات...';
   try{
-    const headers={'Accept':'application/json'};
-    if(token){
-      headers['Authorization']=token.startsWith('Bearer ')?token:'Bearer '+token;
-      headers['Api-Token']=token.replace(/^Bearer\s*/i,'');
-      headers['api-token']=token.replace(/^Bearer\s*/i,'');
-      headers['X-Api-Key']=token.replace(/^Bearer\s*/i,'');
-    }
-    const res=await fetch(url,{method:'GET',headers});
+    const res=await apiFetch(url,token);
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
     const json=await res.json();
     const rawData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
