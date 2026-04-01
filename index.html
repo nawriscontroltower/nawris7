@@ -2300,16 +2300,18 @@ async function fetchFromAPI(){
     while(pg<20){
       pg++;
       const sep=url.includes('?')?'&':'?';
-      const fUrl=cursor?`${url}${sep}cursor=${encodeURIComponent(cursor)}`:url;
+      const fUrl=cursor?`${url}${sep}cursor=${cursor}`:url;
       el.textContent=`⏳ صفحة ${pg}...`;
-      const res=await apiFetch(fUrl,token);
-      if(!res.ok)throw new Error(`HTTP ${res.status}`);
-      const json=await res.json();
-      const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
-      if(pageData.length)rawData=rawData.concat(pageData);
-      const nc=json?.meta?.next_cursor||json?.next_cursor||null;
-      if(!nc||!pageData.length)break;
-      cursor=nc;
+      try{
+        const res=await apiFetch(fUrl,token);
+        if(!res.ok){if(pg>1)break;throw new Error(`HTTP ${res.status}`);}
+        const json=await res.json();
+        const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+        if(pageData.length)rawData=rawData.concat(pageData);
+        const nc=json?.meta?.next_cursor||json?.next_cursor||null;
+        if(!nc||!pageData.length)break;
+        cursor=nc;
+      }catch(pgErr){if(pg>1)break;throw pgErr;}
     }
     if(!rawData.length){el.textContent='⚠️ لا بيانات في الرد';return;}
     const stMap={'مع المندوب':'with_driver','في الشركة':'in_company','delivered':'delivered','مرتجع':'returned'};
@@ -2794,23 +2796,32 @@ async function fetchAPIShipments(){
     while(pageNum<maxPages){
       pageNum++;
       const sep=url.includes('?')?'&':'?';
-      const fetchUrl=cursor?`${url}${sep}cursor=${encodeURIComponent(cursor)}`:url;
+      const fetchUrl=cursor?`${url}${sep}cursor=${cursor}`:url;
       if(el)el.textContent=`⏳ جارٍ جلب الصفحة ${pageNum}...`;
 
-      const res=await apiFetch(fetchUrl,token);
-      if(!res.ok)throw new Error(`HTTP ${res.status}`);
-      const json=await res.json();
+      try{
+        const res=await apiFetch(fetchUrl,token);
+        if(!res.ok){
+          // If page 2+ fails, just stop — we have data from previous pages
+          if(pageNum>1){console.warn('API pagination stopped at page '+pageNum+': HTTP '+res.status);break;}
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const json=await res.json();
 
-      // Extract data array
-      const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
-      if(pageData.length)rawData=rawData.concat(pageData);
+        // Extract data array
+        const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+        if(pageData.length)rawData=rawData.concat(pageData);
 
-      // Check for next page (cursor pagination)
-      const nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
-      if(!nextCursor||!pageData.length){
-        break; // No more pages
+        // Check for next page (cursor pagination)
+        const nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
+        if(!nextCursor||!pageData.length){
+          break; // No more pages
+        }
+        cursor=nextCursor;
+      }catch(pgErr){
+        if(pageNum>1){console.warn('API pagination error at page '+pageNum,pgErr);break;}
+        throw pgErr;
       }
-      cursor=nextCursor;
     }
 
     if(!rawData.length){
@@ -2888,7 +2899,7 @@ async function fetchAPIShipments(){
     localStorage.setItem('api_fetch_log',JSON.stringify(apiFetchLog));
 
     // Update UI
-    if(el)el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${apiShipments.length} طرد (${pageNum} صفحة) — ${new Date().toLocaleTimeString('ar-LY')}</span>`;
+    if(el)el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${apiShipments.length} طرد${pageNum>1?' ('+pageNum+' صفحة)':''} — ${new Date().toLocaleTimeString('ar-LY')}</span>`;
     if(dot)dot.className='sync-dot';
     if(stEl)stEl.textContent='متصل — '+apiShipments.length+' طرد';
     document.getElementById('api-last-fetch').textContent='آخر جلب: '+new Date().toLocaleTimeString('ar-LY');
