@@ -2777,7 +2777,21 @@ async function fetchAPIShipments(){
       return;
     }
 
-    const stMap={'مع المندوب':'with_driver','في الشركة':'in_company','delivered':'delivered','مرتجع':'returned','متأخر':'delayed'};
+    const stMap={'مع المندوب':'with_driver','في الشركة':'in_company','delivered':'delivered','مرتجع':'returned','متأخر':'delayed','مؤجلة مع المندوب':'with_driver','تم التسليم':'delivered','محول':'transferred'};
+    // Fuzzy status resolver for Arabic statuses
+    function resolveStatus(raw){
+      if(!raw)return 'with_driver';
+      const s=String(raw).trim();
+      if(stMap[s])return stMap[s];
+      // Partial match
+      if(s.includes('مرتجع')||s.includes('إرجاع')||s.includes('القاء'))return 'returned';
+      if(s.includes('مندوب'))return 'with_driver';
+      if(s.includes('شركة')||s.includes('مخزن'))return 'in_company';
+      if(s.includes('تسليم')||s.includes('delivered'))return 'delivered';
+      if(s.includes('محول')||s.includes('تحويل'))return 'transferred';
+      if(s.includes('متأخر')||s.includes('مؤجل'))return 'delayed';
+      return s; // Keep original if no match
+    }
     const seen=new Set();
     apiShipments=[];
 
@@ -2797,7 +2811,8 @@ async function fetchAPIShipments(){
         customer_name:customerName,
         customer_phone:customerPhone,
         driver_name:driverName,
-        status:stMap[rawStatus]||rawStatus||'with_driver',
+        raw_status:rawStatus,
+        status:resolveStatus(rawStatus),
         delay_days:days,
         source:'api',
         fetched_at:new Date().toISOString()
@@ -2967,57 +2982,36 @@ function renderAPIShipments(){
   }
 
   tbody.innerHTML=page.map((s,idx)=>{
-    const sid=String(s.id).replace(/"/g,'&quot;');
+    const sid=String(s.id).replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    const tc=String(s.tracking_code||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
     const crData=getCR(s.tracking_code);
     const note=(crData.note||'').replace(/"/g,'&quot;');
     const cResult=crData.result;
     return`<tr class="pr" data-asid="${sid}" style="${cls(s.delay_days)==='critical'?'background:rgba(255,58,92,.04)':''}">
-      <td onclick="event.stopPropagation()"><input type="checkbox" data-asid="${sid}" ${apiChecked.has(sid)?'checked':''} onchange="this.checked?apiChecked.add(this.dataset.asid):apiChecked.delete(this.dataset.asid)"></td>
+      <td><input type="checkbox" data-asid="${sid}" ${apiChecked.has(sid)?'checked':''} onchange="this.checked?apiChecked.add(this.dataset.asid):apiChecked.delete(this.dataset.asid)"></td>
       <td style="color:var(--dim);font-size:10px;text-align:center">${(aPage-1)*aPER+idx+1}</td>
       <td class="code-cell">${s.tracking_code}</td>
       <td style="color:var(--white);font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${s.customer_name||''}">${s.customer_name||'—'}</td>
       <td style="font-family:var(--mono);font-size:11px">${s.customer_phone&&s.customer_phone!=='—'?`<a href="tel:${s.customer_phone}" style="color:var(--blu)">${s.customer_phone}</a>`:'—'}</td>
       <td>${stBadge(s.status)}</td>
       <td>${dBadge(s.delay_days)}</td>
-      <td onclick="event.stopPropagation()"><select class="acr-sel" data-asid="${sid}" data-code="${s.tracking_code}" style="background:var(--bg4);border:1px solid var(--rim);border-radius:4px;padding:2px 4px;font-size:10px;color:var(--white);font-family:var(--font)">
+      <td><select class="acr-sel" data-asid="${sid}" data-code="${tc}" style="background:var(--bg4);border:1px solid var(--rim);border-radius:4px;padding:2px 4px;font-size:10px;color:var(--white);font-family:var(--font)">
         <option value="" ${!cResult?'selected':''}>—</option>
         <option value="solved" ${cResult==='solved'?'selected':''}>✅ تم الحل</option>
         <option value="contacted" ${cResult==='contacted'?'selected':''}>📞 تم التواصل</option>
         <option value="no_answer" ${cResult==='no_answer'?'selected':''}>📵 لا يرد</option>
         <option value="pending" ${cResult==='pending'?'selected':''}>⏳ قيد المتابعة</option>
       </select></td>
-      <td onclick="event.stopPropagation()"><input type="text" value="${note}" placeholder="ملاحظة..." data-asid="${sid}" data-code="${s.tracking_code}" class="anote-inp" style="background:var(--bg4);border:1px solid var(--rim);border-radius:4px;padding:3px 7px;font-size:11px;color:var(--white);font-family:var(--font);width:100px"></td>
-      <td onclick="event.stopPropagation()"><button class="btn btn-wa btn-sm" data-aa="wa" data-asid="${sid}" style="font-size:11px;padding:4px 9px">💬</button></td>
-      <td onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" data-aa="save" data-asid="${sid}" style="font-size:11px;padding:4px 9px">💾</button></td>
-      <td onclick="event.stopPropagation()"><button class="btn btn-pur btn-sm" data-aa="move" data-asid="${sid}" style="font-size:10px;padding:4px 8px" title="نقل للطرود الرئيسية">📦→</button></td>
+      <td><input type="text" value="${note}" placeholder="ملاحظة..." data-asid="${sid}" data-code="${tc}" class="anote-inp" style="background:var(--bg4);border:1px solid var(--rim);border-radius:4px;padding:3px 7px;font-size:11px;color:var(--white);font-family:var(--font);width:100px"></td>
+      <td><button class="btn btn-wa btn-sm" onclick="apiWA('${sid}')" style="font-size:11px;padding:4px 9px">💬</button></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="apiSave('${sid}',this)" style="font-size:11px;padding:4px 9px">💾</button></td>
+      <td><button class="btn btn-pur btn-sm" onclick="apiMove('${sid}')" style="font-size:10px;padding:4px 8px" title="نقل للطرود الرئيسية">📦→</button></td>
     </tr>`;
   }).join('');
 
-  // Event delegation
+  // Change event for contact result selects (use delegation on tbody, only once)
   if(!tbody._adel){
     tbody._adel=true;
-    tbody.addEventListener('click',e=>{
-      const btn=e.target.closest('[data-aa]');
-      if(!btn)return;
-      e.stopPropagation();
-      const sid=btn.dataset.asid,a=btn.dataset.aa;
-      const s=apiShipments.find(x=>x.id===sid);
-      if(!s)return;
-      if(a==='wa'){
-        const ph=normPhone(s.customer_phone||'');
-        const msg=`السلام عليكم ${s.customer_name||''}\n🕊️ ${CFG.company}\n\nبخصوص طردكم رقم: ${s.tracking_code}\nالحالة: ${s.status==='with_driver'?'مع المندوب':'في الشركة'}\nالتأخير: ${s.delay_days} يوم\n\nللاستفسار تواصلوا معنا.\n— ${CFG.company}`;
-        openWAUrl(ph,msg);
-      } else if(a==='save'){
-        const row=btn.closest('.pr');
-        const ni=row?.querySelector('.anote-inp');
-        const cr=row?.querySelector('.acr-sel');
-        saveCR(s.tracking_code,cr?cr.value:'',ni?ni.value:'');
-        btn.textContent='✅';setTimeout(()=>btn.textContent='💾',1500);
-        toast('✅ تم الحفظ','s');
-      } else if(a==='move'){
-        moveAPIToMain(s);
-      }
-    });
     tbody.addEventListener('change',e=>{
       const cr=e.target.closest('.acr-sel');
       if(cr){
@@ -3044,6 +3038,31 @@ function buildAPIPgn(total,totalP){
 }
 
 function changeAPIPerPage(val){aPER=parseInt(val)||25;aPage=1;renderAPIShipments();}
+
+// Global onclick handlers for API shipment buttons
+function apiWA(sid){
+  const s=apiShipments.find(x=>x.id===sid);
+  if(!s){toast('لم يتم العثور على الطرد','e');return;}
+  const ph=normPhone(s.customer_phone||'');
+  const stLabel=s.raw_status||s.status||'—';
+  const msg=`السلام عليكم ${s.customer_name||''}\n🕊️ ${CFG.company}\n\nبخصوص طردكم رقم: ${s.tracking_code}\nالحالة: ${stLabel}\nالتأخير: ${s.delay_days} يوم\n\nللاستفسار تواصلوا معنا.\n— ${CFG.company}`;
+  openWAUrl(ph,msg);
+}
+function apiSave(sid,btn){
+  const s=apiShipments.find(x=>x.id===sid);
+  if(!s){toast('لم يتم العثور على الطرد','e');return;}
+  const row=btn.closest('.pr');
+  const ni=row?.querySelector('.anote-inp');
+  const cr=row?.querySelector('.acr-sel');
+  saveCR(s.tracking_code,cr?cr.value:'',ni?ni.value:'');
+  btn.textContent='✅';setTimeout(()=>btn.textContent='💾',1500);
+  toast('✅ تم الحفظ','s');
+}
+function apiMove(sid){
+  const s=apiShipments.find(x=>x.id===sid);
+  if(!s){toast('لم يتم العثور على الطرد','e');return;}
+  moveAPIToMain(s);
+}
 
 function toggleAllAPI(el){
   document.querySelectorAll('#a-tbody input[type=checkbox]').forEach(cb=>{
