@@ -2799,8 +2799,8 @@ async function fetchAPIShipments(){
     const baseUrl=url.replace(/[?&]delay_days=\d+/g,''); // Strip existing delay_days
     const sep=baseUrl.includes('?')?'&':'?';
 
-    // Fetch ranges: high to low delay to get all unique shipments
-    const ranges=[50,30,20,15,10,5,1];
+    // Fetch ranges: high to low delay to get all unique shipments (1-100+ days)
+    const ranges=[100,90,80,70,60,50,40,30,25,20,15,12,10,8,6,5,4,3,2,1];
     let totalFetched=0;
 
     for(let ri=0;ri<ranges.length;ri++){
