@@ -159,15 +159,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--white);min-height:
 @media(max-width:768px){.kgrid{grid-template-columns:repeat(2,1fr)}.page{padding:12px}}
 
 /* ── HERO ── */
-.hero{background:linear-gradient(135deg,#12073a 0%,#0d1650 45%,#071a3e 75%,#0a0d1f 100%);border-radius:var(--r);padding:26px 30px;margin-bottom:20px;border:1px solid rgba(155,109,255,.25);position:relative;overflow:hidden;box-shadow:0 0 40px rgba(155,109,255,.08),inset 0 1px 0 rgba(255,255,255,.04)}
-.hero::before{content:'';position:absolute;top:-50%;right:-5%;width:500px;height:500px;background:radial-gradient(circle,rgba(155,109,255,.14),transparent 60%);pointer-events:none;animation:heroGlow 4s ease-in-out infinite alternate}
-.hero::after{content:'';position:absolute;bottom:-20px;left:30px;width:200px;height:200px;background:radial-gradient(circle,rgba(79,138,255,.07),transparent 65%);pointer-events:none}
-@keyframes heroGlow{0%{opacity:.6;transform:scale(1)}100%{opacity:1;transform:scale(1.12)}}
-/* Seagull decorations */
-.gull-deco{position:absolute;pointer-events:none;opacity:.12;animation:gullFloat 6s ease-in-out infinite}
-.gull-deco.g2{animation-delay:-2s;opacity:.07;animation-duration:8s}
-.gull-deco.g3{animation-delay:-4s;opacity:.05;animation-duration:10s}
-@keyframes gullFloat{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-8px) rotate(3deg)}}
+.hero{background:linear-gradient(135deg,#150a30 0%,#0b1540 50%,#051525 100%);border-radius:var(--r);padding:26px 30px;margin-bottom:20px;border:1px solid var(--rim2);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-60%;right:-5%;width:400px;height:400px;background:radial-gradient(circle,rgba(155,109,255,.1),transparent 65%);pointer-events:none}
 .hprog-track{background:rgba(255,255,255,.08);border-radius:99px;height:7px;overflow:hidden;margin-top:10px}
 .hprog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--pur),var(--blu));transition:width .8s ease}
 
@@ -216,13 +209,7 @@ tbody tr.pr:hover td{background:rgba(155,109,255,.04)}
 .btn-gold{background:var(--gold);color:var(--bg)}
 .btn-red{background:var(--red);color:#fff}
 .btn-grn{background:var(--grn);color:var(--bg)}
-.btn-wa{background:var(--wa);color:#fff;position:relative;overflow:hidden;transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s,opacity .18s}
-.btn-wa:hover{opacity:1;transform:scale(1.06) translateY(-1px);box-shadow:0 6px 22px rgba(37,211,102,.35)}
-.btn-wa:active{transform:scale(.94)!important;box-shadow:none!important}
-.btn-wa.wa-sending{animation:waSend .5s cubic-bezier(.34,1.56,.64,1)}
-@keyframes waSend{0%{transform:scale(1)}30%{transform:scale(1.18)}60%{transform:scale(.9)}100%{transform:scale(1)}}
-.btn-ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.4);transform:scale(0);animation:rippleOut .55s ease-out forwards;pointer-events:none}
-@keyframes rippleOut{to{transform:scale(4);opacity:0}}
+.btn-wa{background:var(--wa);color:#fff}
 .btn-pur{background:var(--pur);color:#fff}
 .btn-ghost{background:var(--bg4);color:var(--pale);border:1px solid var(--rim)}
 .btn-ghost:hover{border-color:var(--pur);color:var(--pur);opacity:1}
@@ -304,39 +291,6 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.6;width:100%}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--rim2);border-radius:3px}
-
-/* ── CHALLENGE CHART ── */
-.challenge-wrap{display:flex;align-items:center;gap:18px;background:linear-gradient(135deg,rgba(155,109,255,.08),rgba(79,138,255,.05));border:1px solid rgba(155,109,255,.2);border-radius:var(--r);padding:16px 20px;margin-top:16px}
-.challenge-chart-box{position:relative;flex-shrink:0;width:96px;height:96px}
-.challenge-svg{width:96px;height:96px;transform:rotate(-90deg)}
-.challenge-bg-ring{fill:none;stroke:rgba(255,255,255,.07);stroke-width:8}
-.challenge-ring{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.34,1.2,.64,1),stroke .8s ease;filter:drop-shadow(0 0 6px currentColor)}
-.challenge-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
-.challenge-pct{font-size:18px;font-weight:900;font-family:var(--mono);line-height:1;transition:color .8s}
-.challenge-icon{font-size:14px;line-height:1;transition:all .6s}
-.challenge-info{flex:1}
-.challenge-title{font-size:13px;font-weight:800;color:var(--white);margin-bottom:3px}
-.challenge-sub{font-size:11px;color:var(--mute);margin-bottom:10px}
-.challenge-badges{display:flex;gap:6px;flex-wrap:wrap}
-.cbadge{padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;border:1px solid;transition:all .4s}
-.cbadge.fire{background:rgba(255,124,42,.15);color:var(--orn);border-color:rgba(255,124,42,.3);animation:firePulse 1.5s ease-in-out infinite}
-.cbadge.streak{background:rgba(155,109,255,.15);color:var(--pur);border-color:rgba(155,109,255,.3)}
-.cbadge.speed{background:rgba(34,216,150,.12);color:var(--grn);border-color:rgba(34,216,150,.25)}
-@keyframes firePulse{0%,100%{box-shadow:0 0 0 rgba(255,124,42,0)}50%{box-shadow:0 0 10px rgba(255,124,42,.4)}}
-.challenge-bar-wrap{margin-top:8px}
-.challenge-bar-track{background:rgba(255,255,255,.07);border-radius:99px;height:5px;overflow:hidden}
-.challenge-bar-fill{height:100%;border-radius:99px;transition:width 1s cubic-bezier(.34,1.2,.64,1),background .8s}
-/* ── KCARD SHIMMER ── */
-.kcard{animation:kcardIn .4s ease backwards}
-@keyframes kcardIn{from{opacity:0;transform:translateY(10px)}}
-.kcard:nth-child(1){animation-delay:.05s}.kcard:nth-child(2){animation-delay:.1s}
-.kcard:nth-child(3){animation-delay:.15s}.kcard:nth-child(4){animation-delay:.2s}
-.kcard:nth-child(5){animation-delay:.25s}.kcard:nth-child(6){animation-delay:.3s}
-/* ── MANAGER BADGE ── */
-.mgr-crown{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(90deg,rgba(245,200,66,.15),rgba(155,109,255,.1));border:1px solid rgba(245,200,66,.3);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--gold)}
-/* ── PAGE TRANSITION ── */
-.page.on{animation:pageIn .3s ease backwards}
-@keyframes pageIn{from{opacity:0;transform:translateX(8px)}}
 </style>
 </head>
 <body>
@@ -427,73 +381,24 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.6;width:100%}
   <!-- ══ HOME ══ -->
   <div class="page on" id="tab-home">
     <div class="hero">
-      <!-- Seagull decorations -->
-      <svg class="gull-deco" style="top:10px;left:40px;width:60px;height:30px" viewBox="0 0 60 30" fill="none">
-        <path d="M0 20 Q10 8 20 14 Q30 20 40 14 Q50 8 60 20" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-      </svg>
-      <svg class="gull-deco g2" style="top:5px;left:130px;width:38px;height:20px" viewBox="0 0 38 20" fill="none">
-        <path d="M0 14 Q6 5 12 9 Q19 13 25 9 Q31 5 38 14" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
-      </svg>
-      <svg class="gull-deco g3" style="bottom:12px;left:60px;width:28px;height:14px" viewBox="0 0 28 14" fill="none">
-        <path d="M0 10 Q4 3 8 6 Q14 9 18 6 Q22 3 28 10" stroke="white" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-      </svg>
-
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;position:relative;z-index:1">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
         <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-            <div style="font-size:22px;font-weight:900;background:linear-gradient(90deg,#fff,rgba(155,109,255,.9));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text" id="greeting">مرحباً 👋</div>
-            <span id="mgr-crown-badge"></span>
-          </div>
+          <div style="font-size:24px;font-weight:900;margin-bottom:4px" id="greeting">مرحباً 👋</div>
           <div style="font-size:12px;color:var(--pale)" id="hero-date">—</div>
           <div style="font-size:11px;color:var(--mute);margin-top:6px">
-            📦 <span id="h-total" style="color:var(--white);font-weight:700">0</span> طرد &nbsp;|&nbsp; 👤 <span id="h-drivers" style="color:var(--white);font-weight:700">0</span> مندوب
+            📦 <span id="h-total">0</span> طرد &nbsp;|&nbsp; 👤 <span id="h-drivers">0</span> مندوب
           </div>
         </div>
-        <div style="position:relative">
-          <svg viewBox="0 0 70 70" width="70" height="70" style="opacity:.55;filter:drop-shadow(0 0 12px rgba(155,109,255,.5))">
-            <path d="M10 50 Q18 28 28 34 Q35 40 42 34 Q52 28 60 50" stroke="rgba(155,109,255,.8)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
-            <path d="M20 62 Q28 50 35 55 Q42 50 50 62" stroke="rgba(79,138,255,.6)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-            <circle cx="35" cy="24" r="4" fill="rgba(245,200,66,.7)"/>
-          </svg>
-        </div>
+        <div style="font-size:44px;opacity:.6">📦</div>
       </div>
-      <div style="margin-top:14px;position:relative;z-index:1">
+      <div style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--pale);margin-bottom:5px">
-          <span>تقدم التواصل اليوم</span><span id="h-pct" style="font-weight:700;color:var(--pur)">0%</span>
+          <span>تقدم التواصل اليوم</span><span id="h-pct">0%</span>
         </div>
         <div class="hprog-track"><div class="hprog-fill" id="h-fill" style="width:0%"></div></div>
-        <div style="font-size:11px;color:var(--mute);margin-top:4px"><span id="h-ct">0</span> من <span id="h-tc">0</span> مندوب تم التواصل معهم</div>
+        <div style="font-size:11px;color:var(--mute);margin-top:4px"><span id="h-ct">0</span> من <span id="h-tc">0</span> مندوب</div>
       </div>
     </div>
-    <!-- Challenge Chart -->
-    <div class="challenge-wrap" id="challenge-wrap">
-      <div class="challenge-chart-box">
-        <svg class="challenge-svg" viewBox="0 0 96 96">
-          <circle class="challenge-bg-ring" cx="48" cy="48" r="40"/>
-          <circle class="challenge-ring" id="challenge-ring-el" cx="48" cy="48" r="40"
-            stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke="#9b6dff"/>
-        </svg>
-        <div class="challenge-inner">
-          <div class="challenge-pct" id="challenge-pct" style="color:#9b6dff">0%</div>
-          <div class="challenge-icon" id="challenge-icon">🕊️</div>
-        </div>
-      </div>
-      <div class="challenge-info">
-        <div class="challenge-title">تحدي اليوم 🏆</div>
-        <div class="challenge-sub" id="challenge-sub">أكمل التواصل مع المناديب لرفع مستواك</div>
-        <div class="challenge-badges" id="challenge-badges"></div>
-        <div class="challenge-bar-wrap" style="margin-top:8px">
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--mute);margin-bottom:3px">
-            <span id="challenge-prog-lbl">0 / 0 مندوب</span>
-            <span id="challenge-speed-lbl" style="color:var(--pur)"></span>
-          </div>
-          <div class="challenge-bar-track">
-            <div class="challenge-bar-fill" id="challenge-bar" style="width:0%;background:var(--pur)"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="alert-banner" id="alert-banner" onclick="gTab('shipments')" style="display:none">
       <div class="alert-ico">⚠️</div>
       <div style="flex:1">
@@ -1767,8 +1672,6 @@ function updateKPIs(){
   const totalCrit=crit+akCrit;
   if(totalCrit>0){ab.style.display='flex';document.getElementById('alert-title').textContent=`${totalCrit} طرد في خطر حرج (+${CFG.critDays} يوم)!`;}
   else ab.style.display='none';
-  // Refresh challenge chart whenever KPIs update
-  setTimeout(renderChallengeChart,50);
 }
 
 // ══════════════════════════════════════════
@@ -4237,128 +4140,7 @@ function deleteUser(k){
 }
 
 // ═════════════════════════════════
-// ══════════════════════════════════════════
-// CHALLENGE CHART — تحدي الإنجاز الذاتي
-// ══════════════════════════════════════════
-let challengeStartTime=null, challengeContactCount=0;
-const CIRCUMFERENCE=251.2; // 2π × r(40)
-
-function getChallengeColor(pct){
-  if(pct>=85)return{stroke:'#22d896',text:'#22d896',bar:'linear-gradient(90deg,#22d896,#4f8aff)',icon:'🦅',mood:'ممتاز!'};
-  if(pct>=65)return{stroke:'#f5c842',text:'#f5c842',bar:'linear-gradient(90deg,#f5c842,#ff7c2a)',icon:'🕊️',mood:'جيد جداً'};
-  if(pct>=40)return{stroke:'#ff7c2a',text:'#ff7c2a',bar:'linear-gradient(90deg,#ff7c2a,#ff3a5c)',icon:'🌊',mood:'استمر!'};
-  return{stroke:'#9b6dff',text:'#9b6dff',bar:'linear-gradient(90deg,#9b6dff,#4f8aff)',icon:'🕊️',mood:'ابدأ التحدي'};
-}
-
-function renderChallengeChart(){
-  const ring=document.getElementById('challenge-ring-el');
-  const pctEl=document.getElementById('challenge-pct');
-  const iconEl=document.getElementById('challenge-icon');
-  const subEl=document.getElementById('challenge-sub');
-  const badgesEl=document.getElementById('challenge-badges');
-  const barEl=document.getElementById('challenge-bar');
-  const progLbl=document.getElementById('challenge-prog-lbl');
-  const speedLbl=document.getElementById('challenge-speed-lbl');
-  if(!ring)return;
-
-  const tc=parseInt(document.getElementById('h-tc')?.textContent)||0;
-  const ct=parseInt(document.getElementById('h-ct')?.textContent)||0;
-  const pct=tc>0?Math.round(ct/tc*100):0;
-  const clr=getChallengeColor(pct);
-
-  // Animate ring
-  const offset=CIRCUMFERENCE-(pct/100*CIRCUMFERENCE);
-  ring.style.strokeDashoffset=offset;
-  ring.style.stroke=clr.stroke;
-  ring.style.filter=`drop-shadow(0 0 8px ${clr.stroke})`;
-
-  pctEl.textContent=pct+'%';
-  pctEl.style.color=clr.text;
-  iconEl.textContent=clr.icon;
-
-  // Speed calculation
-  if(!challengeStartTime&&ct>0)challengeStartTime=Date.now();
-  let speedTxt='';
-  if(challengeStartTime&&ct>0){
-    const mins=(Date.now()-challengeStartTime)/60000;
-    const rate=mins>0?(ct/mins).toFixed(1):ct;
-    speedTxt=`⚡ ${rate}/دقيقة`;
-  }
-  if(speedLbl)speedLbl.textContent=speedTxt;
-  if(progLbl)progLbl.textContent=`${ct} / ${tc} مندوب`;
-
-  // Bar
-  barEl.style.width=pct+'%';
-  barEl.style.background=clr.bar;
-
-  // Sub text
-  if(subEl)subEl.textContent=pct===100?'أحسنت! أكملت جميع المناديب 🎉':pct>=65?`${clr.mood} — ${tc-ct} مندوب متبقيين`:pct>=40?`${clr.mood} — نصف الطريق خلفك!`:`${clr.mood} — ${tc} مندوب ينتظرون تواصلك`;
-
-  // Badges
-  const badges=[];
-  if(pct===100)badges.push('<span class="cbadge fire">🔥 100% إنجاز</span>');
-  else if(pct>=65)badges.push(`<span class="cbadge streak">🏆 ${pct}% مستمر</span>`);
-  if(ct>=5)badges.push('<span class="cbadge speed">⚡ سرعة عالية</span>');
-  if(badgesEl)badgesEl.innerHTML=badges.join('');
-
-  // Manager crown
-  const crownEl=document.getElementById('mgr-crown-badge');
-  if(crownEl&&CU){
-    if(CU.role==='manager')crownEl.innerHTML='<span class="mgr-crown">👑 مدير</span>';
-    else crownEl.innerHTML='';
-  }
-}
-
-// ══════════════════════════════════════════
-// WA BUTTON ANIMATIONS (Framer Motion-like)
-// ══════════════════════════════════════════
-function initWAAnimations(){
-  document.addEventListener('click',e=>{
-    const btn=e.target.closest('.btn-wa');
-    if(!btn)return;
-    // Ripple
-    const rect=btn.getBoundingClientRect();
-    const size=Math.max(rect.width,rect.height);
-    const x=e.clientX-rect.left-size/2;
-    const y=e.clientY-rect.top-size/2;
-    const rip=document.createElement('span');
-    rip.className='btn-ripple';
-    rip.style.cssText=`width:${size}px;height:${size}px;left:${x}px;top:${y}px`;
-    btn.appendChild(rip);
-    btn.classList.add('wa-sending');
-    setTimeout(()=>{rip.remove();btn.classList.remove('wa-sending');},600);
-    // Update challenge on WA action
-    challengeContactCount++;
-    setTimeout(renderChallengeChart,300);
-  });
-}
-
-// ══════════════════════════════════════════
-// PAGE TRANSITION ANIMATION
-// ══════════════════════════════════════════
-function animatePageIn(pageEl){
-  if(!pageEl)return;
-  pageEl.style.animation='none';
-  void pageEl.offsetWidth;
-  pageEl.style.animation='pageIn .3s ease backwards';
-}
-
-// Patch gTab to add animation
-const _origGTab=gTab;
-function gTab(id){
-  _origGTab(id);
-  const pg=document.getElementById('tab-'+id);
-  if(pg)animatePageIn(pg);
-  if(id==='home')setTimeout(renderChallengeChart,100);
-}
-
-window.addEventListener('load',()=>{
-  init();
-  setTimeout(()=>{
-    initWAAnimations();
-    renderChallengeChart();
-  },800);
-});
+window.addEventListener('load',init);
 </script>
 </body>
 </html>
