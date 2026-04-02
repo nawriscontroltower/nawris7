@@ -914,6 +914,40 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.6;width:100%}
   </div>
 </div>
 
+<div class="overlay" id="tpl-modal">
+  <div class="modal">
+    <div class="mh"><div class="mt" id="tpl-edit-title">تعديل القالب</div><button class="mclose" onclick="closeM('tpl-modal')">✕</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">اسم القالب</label><input class="fi" style="width:100%" id="tpl-name"></div>
+      <div class="fg"><label class="fl">التصنيف</label><input class="fi" style="width:100%" id="tpl-tag" placeholder="عام، عاجل، فرع..."></div>
+      <div class="fg">
+        <label class="fl">نص الرسالة</label>
+        <textarea class="fi" id="tpl-body" rows="10" style="width:100%;line-height:1.8;font-size:13px" dir="rtl"></textarea>
+      </div>
+      <div style="background:var(--bg4);border-radius:var(--r2);padding:10px;margin-top:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--pale);margin-bottom:6px">📌 المتغيرات المتاحة:</div>
+        <div style="font-size:11px;color:var(--mute);line-height:2;display:flex;flex-wrap:wrap;gap:6px">
+          <span class="badge b-blu" style="cursor:pointer;font-size:10px" onclick="insertTplVar('{اسم}')">&#123;اسم&#125;</span>
+          <span class="badge b-blu" style="cursor:pointer;font-size:10px" onclick="insertTplVar('{طرود}')">&#123;طرود&#125;</span>
+          <span class="badge b-blu" style="cursor:pointer;font-size:10px" onclick="insertTplVar('{أيام}')">&#123;أيام&#125;</span>
+          <span class="badge b-blu" style="cursor:pointer;font-size:10px" onclick="insertTplVar('{أكواد}')">&#123;أكواد&#125;</span>
+          <span class="badge b-blu" style="cursor:pointer;font-size:10px" onclick="insertTplVar('{كود}')">&#123;كود&#125;</span>
+          <span class="badge b-blu" style="cursor:pointer;font-size:10px" onclick="insertTplVar('{عميل}')">&#123;عميل&#125;</span>
+          <span class="badge b-blu" style="cursor:pointer;font-size:10px" onclick="insertTplVar('{هاتف_عميل}')">&#123;هاتف_عميل&#125;</span>
+          <span class="badge b-blu" style="cursor:pointer;font-size:10px" onclick="insertTplVar('{شركة}')">&#123;شركة&#125;</span>
+          <span class="badge b-blu" style="cursor:pointer;font-size:10px" onclick="insertTplVar('{فرع}')">&#123;فرع&#125;</span>
+          <span class="badge b-blu" style="cursor:pointer;font-size:10px" onclick="insertTplVar('{تاريخ}')">&#123;تاريخ&#125;</span>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('tpl-modal')">إلغاء</button>
+      <button class="btn btn-red btn-sm" onclick="resetTpl()" style="margin-left:auto">↩️ استرجاع الأصلي</button>
+      <button class="btn btn-pur" onclick="saveTplEdit()">💾 حفظ القالب</button>
+    </div>
+  </div>
+</div>
+
 <div id="toasts"></div>
 
 <script>
@@ -1037,6 +1071,7 @@ async function startApp(){
   loadStatusCfg();
   loadCustomStatuses();
   updateStatusFilters();
+  loadCustomTemplates();
   loadCachedAPIShipments();
   // Auto-sync API shipments after drivers are loaded
   setTimeout(autoSyncAPI,1500);
@@ -1683,16 +1718,87 @@ function loadStatusCfg(){
 // ══════════════════════════════════════════
 function renderWA(){
   buildDropdowns();
-  document.getElementById('tpl-list').innerHTML=WA_TPLS.map(t=>`
-    <div class="tpl-card" onclick="applyTpl('${t.id}')">
+  document.getElementById('tpl-list').innerHTML=WA_TPLS.map((t,i)=>`
+    <div class="tpl-card" style="position:relative">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-        <span style="font-size:12px;font-weight:700">${t.name}</span>
-        <span class="badge b-dim" style="font-size:10px">${t.tag}</span>
+        <span style="font-size:12px;font-weight:700;cursor:pointer" onclick="applyTpl('${t.id}')">${t.name}</span>
+        <div style="display:flex;gap:4px;align-items:center">
+          <span class="badge b-dim" style="font-size:10px">${t.tag}</span>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openTplEdit(${i})" style="font-size:10px;padding:2px 6px" title="تعديل القالب">✏️</button>
+        </div>
       </div>
-      <div style="font-size:11px;color:var(--mute)">${t.body.substring(0,70)}...</div>
+      <div style="font-size:11px;color:var(--mute);cursor:pointer" onclick="applyTpl('${t.id}')">${t.body.substring(0,70)}...</div>
     </div>`).join('');
 }
 function applyTpl(id){const t=WA_TPLS.find(x=>x.id===id);if(!t)return;document.getElementById('wa-t').value=id;previewTpl();}
+
+// Template editing
+let editingTplIdx=-1;
+const ORIG_TPLS=JSON.parse(JSON.stringify(WA_TPLS)); // Keep original defaults
+
+function openTplEdit(idx){
+  editingTplIdx=idx;
+  const t=WA_TPLS[idx];if(!t)return;
+  document.getElementById('tpl-edit-title').textContent='✏️ تعديل — '+t.name;
+  document.getElementById('tpl-name').value=t.name;
+  document.getElementById('tpl-tag').value=t.tag;
+  document.getElementById('tpl-body').value=t.body;
+  document.getElementById('tpl-modal').classList.add('on');
+}
+
+function insertTplVar(v){
+  const ta=document.getElementById('tpl-body');
+  const start=ta.selectionStart;
+  const end=ta.selectionEnd;
+  ta.value=ta.value.substring(0,start)+v+ta.value.substring(end);
+  ta.focus();
+  ta.selectionStart=ta.selectionEnd=start+v.length;
+}
+
+function saveTplEdit(){
+  if(editingTplIdx<0)return;
+  const name=document.getElementById('tpl-name').value.trim();
+  const tag=document.getElementById('tpl-tag').value.trim();
+  const body=document.getElementById('tpl-body').value;
+  if(!name||!body){toast('أدخل اسم ونص القالب','w');return;}
+  WA_TPLS[editingTplIdx].name=name;
+  WA_TPLS[editingTplIdx].tag=tag||'عام';
+  WA_TPLS[editingTplIdx].body=body;
+  // Save to localStorage
+  localStorage.setItem('wa_tpls_custom',JSON.stringify(WA_TPLS));
+  // Try save to Supabase
+  try{sbUp('wa_templates',WA_TPLS.map(t=>({id:t.id,name:t.name,tag:t.tag,body:t.body})));}catch(e){console.warn('tpl save',e);}
+  closeM('tpl-modal');
+  renderWA();
+  toast('✅ تم حفظ القالب','s');
+}
+
+function resetTpl(){
+  if(editingTplIdx<0)return;
+  const orig=ORIG_TPLS[editingTplIdx];
+  if(!orig){toast('لا يوجد قالب أصلي','w');return;}
+  document.getElementById('tpl-name').value=orig.name;
+  document.getElementById('tpl-tag').value=orig.tag;
+  document.getElementById('tpl-body').value=orig.body;
+  toast('تم استرجاع النص الأصلي','i');
+}
+
+// Load custom templates from localStorage on startup
+function loadCustomTemplates(){
+  try{
+    const saved=localStorage.getItem('wa_tpls_custom');
+    if(saved){
+      const custom=JSON.parse(saved);
+      custom.forEach((ct,i)=>{
+        if(WA_TPLS[i]){
+          WA_TPLS[i].name=ct.name||WA_TPLS[i].name;
+          WA_TPLS[i].tag=ct.tag||WA_TPLS[i].tag;
+          WA_TPLS[i].body=ct.body||WA_TPLS[i].body;
+        }
+      });
+    }
+  }catch(e){}
+}
 function previewTpl(){
   const id=document.getElementById('wa-t').value;
   const name=document.getElementById('wa-d').value||'المندوب';
