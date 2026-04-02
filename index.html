@@ -1288,7 +1288,8 @@ function updateKPIs(){
 function renderHome(){
   updateKPIs();
   const h=new Date().getHours();
-  document.getElementById('greeting').textContent=(h<12?'صباح الخير':h<17?'مساء الخير':'مساء النور')+' 👋';
+  const userName=CU?.name||'';
+  document.getElementById('greeting').textContent=(h<12?'صباح الخير':h<17?'مساء الخير':'مساء النور')+` ${userName} 👋`;
   const crit=shipments.filter(s=>cls(s.delay_days)==='critical');
   renderLB('area-lb',crit,'region_name','var(--red)');
   renderLB('drv-lb',crit,'driver_name','var(--gold)');
