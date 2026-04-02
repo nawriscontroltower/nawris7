@@ -3263,11 +3263,25 @@ async function fetchAPIShipments(){
     const baseUrl=url.replace(/[?&]delay_days=\d+/g,''); // Strip existing delay_days
     const sep=baseUrl.includes('?')?'&':'?';
 
-    // Fetch ranges: API returns max 100 per request, cursor is broken
-    // delay>=6 returns 96 (all), delay 1-5 each return 100 (capped)
-    // Fetch from high to low, deduplicate by tracking code
-    const ranges=[100,80,60,40,30,20,15,12,10,8,6,5,4,3,2,1];
-    let totalFetched=0;
+    // Step 1: Try fetching ALL shipments without any delay filter first
+    if(el)el.textContent='⏳ جلب جميع الطرود...';
+    try{
+      const res=await apiFetch(baseUrl,token);
+      if(res.ok){
+        const json=await res.json();
+        const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+        for(const item of pageData){
+          const code=String(item.code||item.id||item.tracking_code||'').trim();
+          if(code&&!seen.has(code)){seen.add(code);rawData.push(item);}
+        }
+        console.log(`No-filter fetch: ${pageData.length} shipments`);
+      }
+    }catch(e){console.warn('No-filter fetch error:',e.message);}
+
+    // Step 2: Range-based fetch to capture missed shipments (API cap 100/request)
+    // Ranges include 0 to capture new shipments with no delay
+    const ranges=[100,80,60,40,30,20,15,12,10,8,6,5,4,3,2,1,0];
+    let totalFetched=rawData.length;
 
     for(let ri=0;ri<ranges.length;ri++){
       const days=ranges[ri];
@@ -3291,12 +3305,6 @@ async function fetchAPIShipments(){
         }
         totalFetched=rawData.length;
         console.log(`Range delay>=${days}: ${pageData.length} fetched, ${newCount} new, total: ${totalFetched}`);
-
-        // If this range returned less than 100, all remaining ranges will be subsets — skip
-        if(pageData.length<100&&ri<ranges.length-1){
-          // But still try lower ranges in case there are different shipments
-          continue;
-        }
       }catch(e){console.warn(`Range delay>=${days} error:`,e.message);continue;}
     }
 
