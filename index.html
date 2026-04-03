@@ -4721,17 +4721,6 @@ function renderAssignStats(){
     }).join('')}`;
 }
 
-// Update staff tab to include API assignments
-const _origRenderStaff=renderStaff;
-function renderStaff(){
-  _origRenderStaff();
-  // Inject API assignment summary per employee in staff tab
-  const a=getAPIAssignments();
-  const staffApiEl=document.getElementById('staff-api-captains');
-  // Already handled in renderStaff, just re-render assign stats
-  renderAssignStats();
-}
-
 window.addEventListener('load',init);
 </script>
 </body>
