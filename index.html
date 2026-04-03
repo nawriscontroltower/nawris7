@@ -45,7 +45,6 @@ html.light .kcard{box-shadow:0 2px 8px rgba(0,0,0,.06)}
 html.light .kcard:hover{box-shadow:0 8px 24px rgba(0,0,0,.1)}
 html.light .card{box-shadow:0 1px 4px rgba(0,0,0,.05)}
 html.light .api-kcard{box-shadow:0 2px 8px rgba(0,0,0,.05)}
-html.light #staging-banner{background:linear-gradient(90deg,#0a0c14,#14093e,#0a0c14)!important}
 html.light .modal{background:var(--bg2);box-shadow:0 8px 40px rgba(0,0,0,.15)}
 html.light .overlay{background:rgba(0,0,0,.35)}
 html.light .lbox{background:var(--bg2);box-shadow:0 4px 40px rgba(0,0,0,.1)}
@@ -400,20 +399,10 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.6;width:100%}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--rim2);border-radius:3px}
-/* ── STAGING BANNER ── */
-#staging-banner{position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:99999!important;background:linear-gradient(90deg,#0a0c14,#14093e,#0a0c14)!important;border-bottom:2px solid rgba(155,109,255,.4)!important;padding:5px 0!important;text-align:center!important;font-size:11px!important;font-weight:700!important;color:rgba(180,140,255,.95)!important;letter-spacing:.7px!important;box-shadow:0 2px 20px rgba(155,109,255,.18)!important;font-family:'IBM Plex Mono',monospace!important;background-image:none!important;background-size:unset!important}
-#staging-banner .sb-inner{background:rgba(155,109,255,.1);padding:3px 18px;border-radius:99px;border:1px solid rgba(155,109,255,.3);display:inline-flex;align-items:center;gap:8px}
-#staging-banner .sb-dot{width:6px;height:6px;border-radius:50%;background:var(--pur,#9b6dff);display:inline-block;animation:pulseDot 2s ease infinite}
-body:has(#staging-banner) #app{padding-top:32px}
-body:has(#staging-banner) #login-screen{padding-top:32px}
 </style>
 </head>
 <body>
 
-<!-- STAGING INDICATOR -->
-<div id="staging-banner" style="position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:99999!important;background:linear-gradient(90deg,#0a0c14,#14093e,#0a0c14)!important;border-bottom:2px solid rgba(155,109,255,.4)!important;padding:5px 0!important;text-align:center!important;font-size:11px!important;font-weight:700!important;color:rgba(180,140,255,.95)!important;letter-spacing:.7px!important;box-shadow:0 2px 20px rgba(155,109,255,.18)!important;font-family:'IBM Plex Mono',monospace!important">
-  <span class="sb-inner"><span class="sb-dot"></span> ⬡ بيئة تجريبية — التغييرات هنا لم تُطبَّق على الإنتاج بعد <span class="sb-dot"></span></span>
-</div>
 
 <!-- LOADING -->
 <div id="loading">
@@ -1652,7 +1641,7 @@ async function startApp(){
   try{document.getElementById('hero-date').textContent=new Intl.DateTimeFormat('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).format(new Date());}catch(e){document.getElementById('hero-date').textContent=new Date().toLocaleDateString('ar-LY',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
   // Show environment tag in hero
   const envTag=document.getElementById('hero-env-tag');
-  if(envTag){const branch=window.location.hostname.includes('github.io')?'PROD':'DEV';envTag.textContent=branch==='PROD'?'⬡ Production':'⬡ Staging';}
+  if(envTag){envTag.textContent='⬡ Production';envTag.style.color='rgba(34,216,150,.7)';}
   await loadAll();
   gTab('home');
   loadStatusCfg();
