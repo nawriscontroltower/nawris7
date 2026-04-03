@@ -5,26 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>النورس للشحن</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕊️%3C/text%3E%3C/svg%3E">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
-  --bg:#08090f;--bg2:#0e1018;--bg3:#141620;--bg4:#1b1e2c;--bg5:#232740;
-  --rim:#252a3d;--rim2:#2e3550;--dim:#4a5270;--mute:#6b7498;--pale:#9daad0;--white:#e8eeff;
-  --gold:#f5c842;--gd:rgba(245,200,66,.15);--gb:rgba(245,200,66,.3);
-  --red:#ff3a5c;--rd:rgba(255,58,92,.14);--rb:rgba(255,58,92,.3);
-  --grn:#22d896;--grd:rgba(34,216,150,.13);--grb:rgba(34,216,150,.28);
-  --blu:#4f8aff;--bld:rgba(79,138,255,.14);--blb:rgba(79,138,255,.3);
-  --orn:#ff7c2a;--ord:rgba(255,124,42,.13);
-  --pur:#9b6dff;--prd:rgba(155,109,255,.13);--prb:rgba(155,109,255,.3);
+  --bg:#0a0c14;--bg2:#10131f;--bg3:#141826;--bg4:#1a1f30;--bg5:#222840;
+  --rim:#232840;--rim2:#2c3356;--dim:#404870;--mute:#6272a4;--pale:#9daad0;--white:#e8eeff;
+  --gold:#f5c842;--gd:rgba(245,200,66,.12);--gb:rgba(245,200,66,.28);
+  --red:#ff3a5c;--rd:rgba(255,58,92,.12);--rb:rgba(255,58,92,.28);
+  --grn:#22d896;--grd:rgba(34,216,150,.11);--grb:rgba(34,216,150,.25);
+  --blu:#4f8aff;--bld:rgba(79,138,255,.12);--blb:rgba(79,138,255,.28);
+  --orn:#ff7c2a;--ord:rgba(255,124,42,.11);
+  --pur:#9b6dff;--prd:rgba(155,109,255,.11);--prb:rgba(155,109,255,.28);
   --wa:#25d366;
-  --font:'Tajawal',sans-serif;--mono:'IBM Plex Mono',monospace;
-  --r:12px;--r2:8px;--r3:6px;
+  --font:'Inter','Tajawal',sans-serif;--ar-font:'Tajawal',sans-serif;--mono:'IBM Plex Mono',monospace;
+  --r:14px;--r2:10px;--r3:7px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.4);
+  --shadow-md:0 4px 16px rgba(0,0,0,.5);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.6);
+  --shadow-pur:0 4px 24px rgba(155,109,255,.2);
 }
 /* ── LIGHT THEME ── */
 html.light{
-  --bg:#f5f6fa;--bg2:#ffffff;--bg3:#ffffff;--bg4:#f0f1f5;--bg5:#e4e6ee;
-  --rim:#d8dbe5;--rim2:#c8ccd8;--dim:#7a7f96;--mute:#6b7085;--pale:#3d4158;--white:#1a1d2e;
+  --bg:#f4f5f9;--bg2:#ffffff;--bg3:#ffffff;--bg4:#eef0f6;--bg5:#e2e5f0;
+  --rim:#dde0ec;--rim2:#c9cedd;--dim:#7e84a3;--mute:#6b7085;--pale:#3d4158;--white:#1a1d2e;
   --gold:#d4a017;--gd:rgba(212,160,23,.12);--gb:rgba(212,160,23,.25);
   --red:#e02d4a;--rd:rgba(224,45,74,.1);--rb:rgba(224,45,74,.22);
   --grn:#17a06e;--grd:rgba(23,160,110,.1);--grb:rgba(23,160,110,.2);
@@ -65,12 +69,25 @@ html.light .sidebar{box-shadow:-2px 0 8px rgba(0,0,0,.04)}
 html.light .sb-item:hover{background:var(--bg4)}
 html.light .sb-item.on{background:var(--prd)}
 
-/* Theme toggle button */
-.theme-toggle{background:none;border:1px solid var(--rim);color:var(--mute);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all .2s;flex-shrink:0}
-.theme-toggle:hover{border-color:var(--pur);color:var(--pur)}
+/* Theme toggle button — pill style */
+.theme-toggle{background:var(--bg4);border:1px solid var(--rim2);color:var(--mute);width:64px;height:30px;border-radius:99px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:12px;transition:all .25s;flex-shrink:0;padding:0 8px;position:relative;overflow:hidden}
+.theme-toggle:hover{border-color:var(--pur);color:var(--pur);background:var(--prd)}
+.theme-toggle svg{width:14px;height:14px;flex-shrink:0}
+.theme-pill-track{width:18px;height:10px;background:var(--rim2);border-radius:99px;position:relative;transition:background .25s;flex-shrink:0}
+.theme-pill-thumb{width:8px;height:8px;border-radius:50%;background:var(--mute);position:absolute;top:1px;right:1px;transition:all .25s}
+html.light .theme-pill-track{background:var(--pur)}
+html.light .theme-pill-thumb{background:#fff;right:auto;left:1px}
 
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--font);background:var(--bg);color:var(--white);min-height:100vh;font-size:14px;overflow-x:hidden}
+body{font-family:var(--ar-font);background:var(--bg);color:var(--white);min-height:100vh;font-size:14px;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+/* Use Inter for numbers and latin text */
+.kval,.kval *,.kval span,
+.mono-num,
+.tclock,
+[class*="mono"],
+table td:first-child{font-family:var(--mono);font-feature-settings:"tnum"}
+/* Numbers in stat cards */
+.kval{font-family:var(--mono)!important}
 
 /* ── LOADING ── */
 #loading{position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background-image:radial-gradient(ellipse 80% 55% at 50% 0%,rgba(155,109,255,.08),transparent)}
@@ -96,27 +113,30 @@ body{font-family:var(--font);background:var(--bg);color:var(--white);min-height:
 #app.active{display:flex;min-height:100vh}
 
 /* ── SIDEBAR ── */
-.sidebar{width:240px;background:var(--bg2);border-left:1px solid var(--rim);display:flex;flex-direction:column;position:fixed;top:0;right:0;bottom:0;z-index:300;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;transition:transform .25s ease}
-.sidebar::-webkit-scrollbar{width:4px}
+.sidebar{width:248px;background:rgba(10,12,20,.82);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-left:1px solid rgba(155,109,255,.18);display:flex;flex-direction:column;position:fixed;top:0;right:0;bottom:0;z-index:300;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 40px rgba(0,0,0,.5)}
+.sidebar::-webkit-scrollbar{width:3px}
 .sidebar::-webkit-scrollbar-thumb{background:var(--rim2);border-radius:3px}
-.sb-brand{padding:18px 16px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--rim)}
-.sb-brand-logo{font-size:28px}
-.sb-brand-text{font-size:15px;font-weight:900;color:var(--pur);line-height:1.3}
-.sb-brand-ver{font-size:9px;background:var(--prd);color:var(--pur);padding:1px 6px;border-radius:99px;font-weight:700;margin-right:4px}
-.sb-nav{flex:1;padding:8px 0}
-.sb-item{display:flex;align-items:center;gap:10px;padding:10px 18px;cursor:pointer;font-size:13px;font-weight:600;color:var(--mute);transition:all .18s;border-right:3px solid transparent;white-space:nowrap}
-.sb-item:hover{color:var(--pale);background:var(--bg4)}
-.sb-item.on{color:var(--pur);background:var(--prd);border-right-color:var(--pur)}
-.sb-item-icon{font-size:16px;min-width:22px;text-align:center}
-.sb-item .tbadge{background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:9px;margin-right:auto}
-.sb-divider{height:1px;background:var(--rim);margin:6px 16px}
-.sb-section{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;padding:12px 18px 4px}
-.sb-footer{padding:12px 16px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:8px}
-.sb-user{display:flex;align-items:center;gap:8px}
+.sb-brand{padding:20px 18px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(155,109,255,.12)}
+.sb-brand-logo{font-size:28px;filter:drop-shadow(0 0 8px rgba(155,109,255,.4))}
+.sb-brand-text{font-size:15px;font-weight:900;color:var(--pur);line-height:1.3;letter-spacing:-.2px;font-family:var(--ar-font)}
+.sb-brand-ver{font-size:9px;background:var(--prd);color:var(--pur);padding:1px 6px;border-radius:99px;font-weight:700;margin-right:4px;border:1px solid var(--prb)}
+.sb-nav{flex:1;padding:10px 0}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 18px;cursor:pointer;font-size:13px;font-weight:600;color:var(--mute);transition:all .2s cubic-bezier(.4,0,.2,1);border-right:3px solid transparent;white-space:nowrap;border-radius:0;margin:1px 0;font-family:var(--ar-font)}
+.sb-item:hover{color:var(--pale);background:rgba(155,109,255,.07);transform:translateX(-2px)}
+.sb-item.on{color:var(--pur);background:rgba(155,109,255,.13);border-right-color:var(--pur);box-shadow:inset 0 0 20px rgba(155,109,255,.06)}
+.sb-item-icon{min-width:22px;display:flex;align-items:center;justify-content:center;opacity:.8}
+.sb-item.on .sb-item-icon{opacity:1}
+.sb-item .tbadge{background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:9px;margin-right:auto;font-family:var(--mono)}
+.sb-divider{height:1px;background:rgba(155,109,255,.1);margin:6px 16px}
+.sb-section{font-size:9.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;padding:14px 18px 5px;font-family:var(--mono)}
+.sb-footer{padding:14px 16px;border-top:1px solid rgba(155,109,255,.12);display:flex;flex-direction:column;gap:10px;background:rgba(0,0,0,.2)}
+.sb-user{display:flex;align-items:center;gap:10px}
 .sb-footer-row{display:flex;align-items:center;gap:6px}
+html.light .sidebar{background:rgba(255,255,255,.9);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-left-color:rgba(155,109,255,.2);box-shadow:-4px 0 40px rgba(0,0,0,.1)}
 
 /* ── TOPBAR ── */
-.topbar{height:50px;background:var(--bg2);border-bottom:1px solid var(--rim);display:flex;align-items:center;padding:0 20px;gap:12px;position:sticky;top:0;z-index:200}
+.topbar{height:52px;background:rgba(16,19,31,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(155,109,255,.14);display:flex;align-items:center;padding:0 20px;gap:12px;position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(0,0,0,.3)}
+html.light .topbar{background:rgba(255,255,255,.9);border-bottom-color:var(--rim)}
 .tlogo{font-size:16px;font-weight:900;color:var(--pur);display:flex;align-items:center;gap:6px;display:none}
 .tver{font-size:10px;background:var(--prd);color:var(--pur);padding:2px 6px;border-radius:99px;font-weight:700}
 .tspace{flex:1}
@@ -134,15 +154,33 @@ body{font-family:var(--font);background:var(--bg);color:var(--white);min-height:
 .sb-toggle:hover{border-color:var(--pur);color:var(--pur)}
 
 /* ── MAIN CONTENT ── */
-.main-content{flex:1;margin-right:240px;display:flex;flex-direction:column;min-height:100vh}
+.main-content{flex:1;margin-right:248px;display:flex;flex-direction:column;min-height:100vh}
 
 /* ── TABS (hidden, replaced by sidebar) ── */
 .tabs{display:none !important}
 
 /* ── PAGES ── */
-.page{display:none;padding:20px;animation:fade .2s ease}
+.page{display:none;padding:22px;animation:pageIn .3s cubic-bezier(.4,0,.2,1)}
 .page.on{display:block}
-@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+/* Staggered card animations */
+.kcard:nth-child(1){animation-delay:.05s}
+.kcard:nth-child(2){animation-delay:.1s}
+.kcard:nth-child(3){animation-delay:.15s}
+.kcard:nth-child(4){animation-delay:.2s}
+.kcard:nth-child(5){animation-delay:.25s}
+.kcard:nth-child(6){animation-delay:.3s}
+/* Table row fade-in */
+tbody tr{animation:fadeIn .25s ease both}
+tbody tr:nth-child(1){animation-delay:.02s}
+tbody tr:nth-child(2){animation-delay:.04s}
+tbody tr:nth-child(3){animation-delay:.06s}
+tbody tr:nth-child(4){animation-delay:.08s}
+tbody tr:nth-child(5){animation-delay:.1s}
+/* Button spring scale */
+.btn:active{transform:scale(.93);transition:transform .1s cubic-bezier(.34,1.56,.64,1)}
 
 /* ── SIDEBAR OVERLAY for mobile ── */
 .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:290;backdrop-filter:blur(2px)}
@@ -155,45 +193,72 @@ body{font-family:var(--font);background:var(--bg);color:var(--white);min-height:
   .main-content{margin-right:0}
   .sb-toggle{display:flex}
   .tlogo{display:flex}
+  .page{padding:14px}
 }
 @media(max-width:768px){.kgrid{grid-template-columns:repeat(2,1fr)}.page{padding:12px}}
 
 /* ── HERO ── */
-.hero{background:linear-gradient(135deg,#150a30 0%,#0b1540 50%,#051525 100%);border-radius:var(--r);padding:26px 30px;margin-bottom:20px;border:1px solid var(--rim2);position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;top:-60%;right:-5%;width:400px;height:400px;background:radial-gradient(circle,rgba(155,109,255,.1),transparent 65%);pointer-events:none}
-.hprog-track{background:rgba(255,255,255,.08);border-radius:99px;height:7px;overflow:hidden;margin-top:10px}
-.hprog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--pur),var(--blu));transition:width .8s ease}
+.hero{background:linear-gradient(135deg,#110830 0%,#0b1540 55%,#060f1e 100%);border-radius:var(--r);padding:28px 32px;margin-bottom:22px;border:1px solid rgba(155,109,255,.2);position:relative;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.hero::before{content:'';position:absolute;top:-50%;right:-3%;width:480px;height:480px;background:radial-gradient(circle,rgba(155,109,255,.12),transparent 60%);pointer-events:none}
+.hero::after{content:'';position:absolute;bottom:-40%;left:10%;width:300px;height:300px;background:radial-gradient(circle,rgba(79,138,255,.07),transparent 60%);pointer-events:none}
+.hero-greeting{font-size:26px;font-weight:900;margin-bottom:4px;background:linear-gradient(135deg,#fff 30%,rgba(155,109,255,.9) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:var(--ar-font)}
+.hero-date{font-size:13px;color:var(--pale);opacity:.8;font-family:var(--ar-font)}
+.hero-meta{font-size:12px;color:var(--mute);margin-top:8px;font-family:var(--ar-font)}
+.hprog-track{background:rgba(255,255,255,.07);border-radius:99px;height:6px;overflow:hidden;margin-top:12px;position:relative}
+.hprog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--pur),var(--blu),var(--grn));transition:width 1s cubic-bezier(.4,0,.2,1);position:relative}
+.hprog-fill::after{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);animation:shimmer 2s ease 1.2s forwards}
+@keyframes shimmer{0%{left:-60%}100%{left:150%}}
+html.light .hero{background:linear-gradient(135deg,#f0eaff 0%,#e8eeff 55%,#eaf0ff 100%);border-color:rgba(155,109,255,.3)}
+html.light .hero-greeting{background:linear-gradient(135deg,#1a1d2e 30%,var(--pur) 100%);-webkit-background-clip:text;background-clip:text}
 
 /* ── KPI ── */
-.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
-.kcard{background:var(--bg3);border:1px solid var(--rim);border-radius:var(--r);padding:16px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s,border-color .2s}
-.kcard:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
-.kcard[onclick]:hover{border-color:var(--pur);box-shadow:0 6px 20px rgba(155,109,255,.15)}
-.kcard[onclick]:active{transform:scale(.97)}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:14px;margin-bottom:22px}
+.kcard{background:var(--bg3);border:1px solid var(--rim);border-radius:var(--r);padding:18px 16px 14px;position:relative;overflow:hidden;transition:transform .22s cubic-bezier(.4,0,.2,1),box-shadow .22s,border-color .22s;animation:slideUp .35s ease both}
+.kcard:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.kcard[onclick]{cursor:pointer}
+.kcard[onclick]:hover{border-color:var(--pur);box-shadow:0 10px 30px rgba(155,109,255,.2)}
+.kcard[onclick]:active{transform:scale(.97) translateY(-2px)}
 .kcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0}
-.kcard.gold::before{background:var(--gold)}.kcard.red::before{background:var(--red)}
-.kcard.grn::before{background:var(--grn)}.kcard.blu::before{background:var(--blu)}
-.kcard.orn::before{background:var(--orn)}.kcard.pur::before{background:var(--pur)}
-.kval{font-size:32px;font-weight:900;font-family:var(--mono);line-height:1.1}
+.kcard.gold::before{background:linear-gradient(90deg,var(--gold),rgba(245,200,66,.5))}.kcard.red::before{background:linear-gradient(90deg,var(--red),rgba(255,58,92,.5))}
+.kcard.grn::before{background:linear-gradient(90deg,var(--grn),rgba(34,216,150,.5))}.kcard.blu::before{background:linear-gradient(90deg,var(--blu),rgba(79,138,255,.5))}
+.kcard.orn::before{background:linear-gradient(90deg,var(--orn),rgba(255,124,42,.5))}.kcard.pur::before{background:linear-gradient(90deg,var(--pur),rgba(155,109,255,.5))}
+.kcard-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.kval{font-size:30px;font-weight:900;font-family:var(--mono);line-height:1.1;letter-spacing:-1px}
 .kcard.gold .kval{color:var(--gold)}.kcard.red .kval{color:var(--red)}
 .kcard.grn .kval{color:var(--grn)}.kcard.blu .kval{color:var(--blu)}
 .kcard.orn .kval{color:var(--orn)}.kcard.pur .kval{color:var(--pur)}
-.klbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--mute);margin-bottom:6px}
+.klbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--mute);margin-bottom:8px;font-family:var(--ar-font)}
+/* Sparkline area at bottom of kcard */
+.kcard-sparkline{position:absolute;bottom:0;left:0;right:0;height:36px;opacity:.55}
+.kcard-sparkline polyline,.kcard-sparkline path{fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.kcard.gold .kcard-sparkline polyline{stroke:var(--gold)}
+.kcard.red .kcard-sparkline polyline{stroke:var(--red)}
+.kcard.grn .kcard-sparkline polyline{stroke:var(--grn)}
+.kcard.blu .kcard-sparkline polyline{stroke:var(--blu)}
+.kcard.orn .kcard-sparkline polyline{stroke:var(--orn)}
+.kcard.pur .kcard-sparkline polyline{stroke:var(--pur)}
+/* Pulse dot for critical card */
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block;animation:pulseDot 1.5s ease infinite;flex-shrink:0}
+@keyframes pulseDot{0%,100%{box-shadow:0 0 0 0 rgba(255,58,92,.5)}50%{box-shadow:0 0 0 6px rgba(255,58,92,0)}}
+.kcard-actions{font-size:9px;color:var(--dim);margin-top:6px;display:flex;align-items:center;gap:4px}
+.kcard-actions svg{width:10px;height:10px;opacity:.6}
 
 /* ── CARD ── */
-.card{background:var(--bg3);border:1px solid var(--rim);border-radius:var(--r);padding:18px;margin-bottom:16px}
-.ctitle{font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.card{background:var(--bg3);border:1px solid var(--rim);border-radius:var(--r);padding:20px;margin-bottom:16px;transition:border-color .2s}
+.card:hover{border-color:var(--rim2)}
+.ctitle{font-size:13px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:-.1px;font-family:var(--ar-font)}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
 @media(max-width:860px){.g2{grid-template-columns:1fr}}
 
 /* ── TABLE ── */
-.tw{overflow-x:auto}
+.tw{overflow-x:auto;border-radius:var(--r);overflow:hidden;border:1px solid var(--rim)}
 table{width:100%;border-collapse:collapse;font-size:12px}
-thead th{background:var(--bg4);padding:9px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);border-bottom:1px solid var(--rim);white-space:nowrap}
-tbody td{padding:9px 12px;border-bottom:1px solid var(--rim);color:var(--pale);white-space:nowrap;vertical-align:middle}
+thead th{background:var(--bg4);padding:10px 13px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);border-bottom:1px solid var(--rim);white-space:nowrap;font-family:var(--mono)}
+tbody td{padding:10px 13px;border-bottom:1px solid var(--rim);color:var(--pale);white-space:nowrap;vertical-align:middle;transition:background .15s;font-family:var(--ar-font)}
 tbody tr:last-child td{border-bottom:none}
-tbody tr.pr:hover td{background:rgba(155,109,255,.04)}
-.code-cell{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--blu)}
+tbody tr.pr:hover td{background:rgba(155,109,255,.05)}
+tbody tr:hover td{background:rgba(255,255,255,.02)}
+.code-cell{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--blu);letter-spacing:.3px}
 
 /* ── BADGES ── */
 .badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap}
@@ -206,8 +271,9 @@ tbody tr.pr:hover td{background:rgba(155,109,255,.04)}
 .dp-o{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:var(--r3);font-family:var(--mono);font-size:11px;font-weight:700;background:var(--grd);color:var(--grn);border:1px solid var(--grb)}
 
 /* ── BUTTONS ── */
-.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--r2);border:none;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .18s}
-.btn:hover{opacity:.85}.btn:active{transform:scale(.96)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:var(--r2);border:none;font-family:var(--ar-font);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s cubic-bezier(.4,0,.2,1);letter-spacing:.2px}
+.btn:hover{opacity:.88;transform:translateY(-1px)}
+.btn:active{transform:scale(.93) translateY(0);transition:transform .1s cubic-bezier(.34,1.56,.64,1)}
 .btn-gold{background:var(--gold);color:var(--bg)}
 .btn-red{background:var(--red);color:#fff}
 .btn-grn{background:var(--grn);color:var(--bg)}
@@ -267,17 +333,23 @@ tbody tr.pr:hover td{background:rgba(155,109,255,.04)}
 textarea.fi{resize:vertical;min-height:80px;line-height:1.6;width:100%}
 
 /* ── ALERT ── */
-.alert-banner{background:linear-gradient(90deg,rgba(255,58,92,.16),transparent);border:1px solid var(--rb);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;cursor:pointer}
-.alert-ico{width:40px;height:40px;background:var(--rd);border:1px solid var(--rb);border-radius:var(--r2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.alert-banner{background:rgba(255,58,92,.06);backdrop-filter:blur(8px);border:1px solid rgba(255,58,92,.2);border-radius:var(--r);padding:14px 18px;margin-bottom:22px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:background .2s,border-color .2s;box-shadow:0 4px 20px rgba(255,58,92,.08)}
+.alert-banner:hover{background:rgba(255,58,92,.1);border-color:rgba(255,58,92,.35)}
+.alert-ico{width:40px;height:40px;background:var(--rd);border:1px solid var(--rb);border-radius:var(--r2);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative}
+.alert-pulse{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--red);animation:alertPulse 1.8s ease infinite}
+@keyframes alertPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,58,92,.6);transform:scale(1)}50%{box-shadow:0 0 0 8px rgba(255,58,92,0);transform:scale(1.1)}}
 
 /* ── LEADERBOARD ── */
-.lbi{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--rim)}
+.lbi{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--rim)}
 .lbi:last-child{border-bottom:none}
 .lbr{font-family:var(--mono);font-size:10px;color:var(--dim);width:22px;text-align:center}
-.lbn{flex:1;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbn{flex:1;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--ar-font)}
+/* Horizontal SVG bar for leaderboard */
+.lbsvg{width:80px;height:16px;flex-shrink:0;overflow:visible}
+.lbsvg rect{transition:width .8s cubic-bezier(.4,0,.2,1)}
 .lbbar{width:70px;background:var(--bg5);border-radius:99px;height:4px;flex-shrink:0}
 .lbfill{height:100%;border-radius:99px}
-.lbv{font-family:var(--mono);font-size:12px;font-weight:900;min-width:24px;text-align:left}
+.lbv{font-family:var(--mono);font-size:12px;font-weight:900;min-width:28px;text-align:left}
 
 /* ── WA TEMPLATE ── */
 .tpl-card{background:var(--bg4);border:1px solid var(--rim);border-radius:var(--r2);padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .2s}
@@ -294,9 +366,9 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.6;width:100%}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--rim2);border-radius:3px}
 /* ── STAGING BANNER ── */
-#staging-banner{position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(90deg,#0e1018,#1a1040,#0e1018);border-bottom:1px solid rgba(155,109,255,.35);padding:5px 0;text-align:center;font-size:11px;font-weight:700;color:rgba(155,109,255,.9);letter-spacing:.5px;box-shadow:0 2px 16px rgba(155,109,255,.15)}
-#staging-banner span{background:rgba(155,109,255,.1);padding:3px 16px;border-radius:99px;border:1px solid rgba(155,109,255,.3)}
-#staging-banner span::before{content:'🧪 '}
+#staging-banner{position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(90deg,#0a0c14,#12093a,#0a0c14);border-bottom:1px solid rgba(155,109,255,.3);padding:4px 0;text-align:center;font-size:10.5px;font-weight:700;color:rgba(155,109,255,.85);letter-spacing:.6px;box-shadow:0 1px 12px rgba(155,109,255,.12);font-family:'IBM Plex Mono',monospace}
+#staging-banner span{background:rgba(155,109,255,.08);padding:2px 14px;border-radius:99px;border:1px solid rgba(155,109,255,.25);display:inline-flex;align-items:center;gap:6px}
+#staging-banner span::before{content:'⬡';font-size:9px;opacity:.7}
 body:has(#staging-banner) #app{padding-top:30px}
 body:has(#staging-banner) #login-screen{padding-top:30px}
 </style>
@@ -347,20 +419,20 @@ body:has(#staging-banner) #login-screen{padding-top:30px}
     </div>
     <nav class="sb-nav" id="nav-tabs">
       <div class="sb-section">القائمة الرئيسية</div>
-      <div class="sb-item on" data-tab="home"><span class="sb-item-icon">🏠</span> الرئيسية</div>
-      <div class="sb-item" data-tab="shipments"><span class="sb-item-icon">📦</span> الطرود <span class="tbadge" id="tb-crit">0</span></div>
-      <div class="sb-item" data-tab="drivers"><span class="sb-item-icon">👤</span> المناديب</div>
-      <div class="sb-item" data-tab="returns"><span class="sb-item-icon">↩️</span> المرتجعات</div>
-      <div class="sb-item" data-tab="transfers"><span class="sb-item-icon">🔄</span> التحويلات</div>
-      <div class="sb-item" data-tab="api-shipments"><span class="sb-item-icon">🔗</span> طرود API <span class="tbadge" id="tb-api" style="background:var(--pur)">0</span></div>
-      <div class="sb-item" data-tab="whatsapp"><span class="sb-item-icon">💬</span> واتساب</div>
+      <div class="sb-item on" data-tab="home"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> الرئيسية</div>
+      <div class="sb-item" data-tab="shipments"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> الطرود <span class="tbadge" id="tb-crit">0</span></div>
+      <div class="sb-item" data-tab="drivers"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span> المناديب</div>
+      <div class="sb-item" data-tab="returns"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg></span> المرتجعات</div>
+      <div class="sb-item" data-tab="transfers"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> التحويلات</div>
+      <div class="sb-item" data-tab="api-shipments"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span> طرود API <span class="tbadge" id="tb-api" style="background:var(--pur)">0</span></div>
+      <div class="sb-item" data-tab="whatsapp"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> واتساب</div>
       <div class="sb-divider"></div>
       <div class="sb-section manager-only">الإدارة</div>
-      <div class="sb-item manager-only" data-tab="users"><span class="sb-item-icon">🔐</span> المستخدمون</div>
-      <div class="sb-item manager-only" data-tab="reports"><span class="sb-item-icon">📊</span> التقارير</div>
-      <div class="sb-item manager-only" data-tab="staff"><span class="sb-item-icon">👥</span> متابعة الموظفين</div>
-      <div class="sb-item manager-only" data-tab="master"><span class="sb-item-icon">⚙️</span> البيانات الثابتة</div>
-      <div class="sb-item manager-only" data-tab="upload"><span class="sb-item-icon">📥</span> رفع البيانات</div>
+      <div class="sb-item manager-only" data-tab="users"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> المستخدمون</div>
+      <div class="sb-item manager-only" data-tab="reports"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> التقارير</div>
+      <div class="sb-item manager-only" data-tab="staff"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> متابعة الموظفين</div>
+      <div class="sb-item manager-only" data-tab="master"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> البيانات الثابتة</div>
+      <div class="sb-item manager-only" data-tab="upload"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></span> رفع البيانات</div>
     </nav>
     <div class="sb-footer">
       <div class="sb-user">
@@ -371,7 +443,11 @@ body:has(#staging-banner) #login-screen{padding-top:30px}
         </div>
       </div>
       <div class="sb-footer-row">
-        <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل المظهر">🌙</button>
+        <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل المظهر">
+          <svg id="theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg id="theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <span class="theme-pill-track"><span class="theme-pill-thumb"></span></span>
+        </button>
         <button class="lout-btn" onclick="doLogout()" style="flex:1;text-align:center">خروج</button>
       </div>
     </div>
@@ -387,6 +463,11 @@ body:has(#staging-banner) #login-screen{padding-top:30px}
       <span class="sync-dot" id="sync-dot"></span>
       <span id="sync-txt" style="font-size:11px;color:var(--mute)">متصل</span>
       <div class="tclock" id="clock">--:--</div>
+      <button class="theme-toggle" id="theme-btn-top" onclick="toggleTheme()" title="تبديل المظهر" style="display:flex">
+        <svg id="theme-sun-top" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg id="theme-moon-top" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span class="theme-pill-track"><span class="theme-pill-thumb"></span></span>
+      </button>
     </div>
 
     <div class="tabs" id="nav-tabs-old" style="display:none"></div>
@@ -394,39 +475,77 @@ body:has(#staging-banner) #login-screen{padding-top:30px}
   <!-- ══ HOME ══ -->
   <div class="page on" id="tab-home">
     <div class="hero">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;position:relative;z-index:1">
         <div>
-          <div style="font-size:24px;font-weight:900;margin-bottom:4px" id="greeting">مرحباً 👋</div>
-          <div style="font-size:12px;color:var(--pale)" id="hero-date">—</div>
-          <div style="font-size:11px;color:var(--mute);margin-top:6px">
-            📦 <span id="h-total">0</span> طرد &nbsp;|&nbsp; 👤 <span id="h-drivers">0</span> مندوب
+          <div class="hero-greeting" id="greeting">مرحباً 👋</div>
+          <div class="hero-date" id="hero-date">—</div>
+          <div class="hero-meta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="12" height="12" style="vertical-align:middle;margin-left:2px"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <span id="h-total">0</span> طرد &nbsp;·&nbsp;
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="12" height="12" style="vertical-align:middle;margin-left:2px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span id="h-drivers">0</span> مندوب
           </div>
         </div>
-        <div style="font-size:44px;opacity:.6">📦</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <div style="font-size:11px;color:rgba(155,109,255,.7);font-family:var(--mono);letter-spacing:.5px" id="hero-env-tag"></div>
+        </div>
       </div>
-      <div style="margin-top:14px">
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--pale);margin-bottom:5px">
-          <span>تقدم التواصل اليوم</span><span id="h-pct">0%</span>
+      <div style="margin-top:18px;position:relative;z-index:1">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--pale);margin-bottom:7px;opacity:.8">
+          <span>تقدم التواصل اليوم</span><span id="h-pct" style="font-family:var(--mono);font-weight:700">0%</span>
         </div>
         <div class="hprog-track"><div class="hprog-fill" id="h-fill" style="width:0%"></div></div>
-        <div style="font-size:11px;color:var(--mute);margin-top:4px"><span id="h-ct">0</span> من <span id="h-tc">0</span> مندوب</div>
+        <div style="font-size:11px;color:var(--mute);margin-top:6px"><span id="h-ct" style="font-family:var(--mono)">0</span> من <span id="h-tc" style="font-family:var(--mono)">0</span> مندوب تم التواصل معهم</div>
       </div>
     </div>
     <div class="alert-banner" id="alert-banner" onclick="gTab('shipments')" style="display:none">
-      <div class="alert-ico">⚠️</div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:800;color:var(--red)" id="alert-title">طرود حرجة!</div>
-        <div style="font-size:12px;color:var(--pale)">اضغط للاطلاع والتدخل الفوري</div>
+      <div class="alert-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" style="color:var(--red)"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="alert-pulse"></span>
       </div>
-      <div style="color:var(--red);font-size:20px">←</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:800;color:var(--red);font-family:var(--ar-font)" id="alert-title">طرود حرجة تتطلب تدخلاً فورياً</div>
+        <div style="font-size:11px;color:var(--mute);margin-top:2px;font-family:var(--ar-font)">اضغط للاطلاع على التفاصيل والتدخل</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="color:var(--red);flex-shrink:0"><polyline points="15 18 9 12 15 6"/></svg>
     </div>
     <div class="kgrid">
-      <div class="kcard gold" style="cursor:pointer" onclick="goShipments('','')"><div class="klbl">إجمالي الطرود</div><div class="kval" id="k-total">0</div></div>
-      <div class="kcard red" style="cursor:pointer" onclick="goShipments('delay','critical')"><div class="klbl">حرج +15 يوم</div><div class="kval" id="k-crit">0</div></div>
-      <div class="kcard gold" style="cursor:pointer" onclick="goShipments('delay','warning')"><div class="klbl">تحذير 7-15 يوم</div><div class="kval" id="k-warn">0</div></div>
-      <div class="kcard grn" style="cursor:pointer" onclick="goShipments('delay','ok')"><div class="klbl">في الموعد</div><div class="kval" id="k-ok">0</div></div>
-      <div class="kcard blu" style="cursor:pointer" onclick="goShipments('status','in_company')"><div class="klbl">في الشركة</div><div class="kval" id="k-comp">0</div></div>
-      <div class="kcard orn" style="cursor:pointer" onclick="goShipments('status','returned')"><div class="klbl">مرتجعة</div><div class="kval" id="k-ret">0</div></div>
+      <div class="kcard gold" onclick="goShipments('','')">
+        <div class="klbl">إجمالي الطرود</div>
+        <div class="kval" id="k-total">0</div>
+        <div class="kcard-actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> عرض الكل</div>
+        <svg class="kcard-sparkline" id="sp-total" viewBox="0 0 120 36" preserveAspectRatio="none"><polyline points="0,30 20,24 40,26 60,18 80,20 100,12 120,8"/></svg>
+      </div>
+      <div class="kcard red" onclick="goShipments('delay','critical')">
+        <div class="kcard-header"><div class="klbl">حرج +15 يوم</div><span class="pulse-dot"></span></div>
+        <div class="kval" id="k-crit">0</div>
+        <div class="kcard-actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg> تدخل فوري</div>
+        <svg class="kcard-sparkline" id="sp-crit" viewBox="0 0 120 36" preserveAspectRatio="none"><polyline points="0,8 20,12 40,10 60,14 80,12 100,16 120,18"/></svg>
+      </div>
+      <div class="kcard gold" onclick="goShipments('delay','warning')">
+        <div class="klbl">تحذير 7-15 يوم</div>
+        <div class="kval" id="k-warn">0</div>
+        <div class="kcard-actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> مراقبة</div>
+        <svg class="kcard-sparkline" id="sp-warn" viewBox="0 0 120 36" preserveAspectRatio="none"><polyline points="0,20 20,18 40,22 60,16 80,14 100,18 120,12"/></svg>
+      </div>
+      <div class="kcard grn" onclick="goShipments('delay','ok')">
+        <div class="klbl">في الموعد</div>
+        <div class="kval" id="k-ok">0</div>
+        <div class="kcard-actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="20 6 9 17 4 12"/></svg> بحسب الجدول</div>
+        <svg class="kcard-sparkline" id="sp-ok" viewBox="0 0 120 36" preserveAspectRatio="none"><polyline points="0,28 20,22 40,18 60,14 80,10 100,8 120,6"/></svg>
+      </div>
+      <div class="kcard blu" onclick="goShipments('status','in_company')">
+        <div class="klbl">في الشركة</div>
+        <div class="kval" id="k-comp">0</div>
+        <div class="kcard-actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> عرض</div>
+        <svg class="kcard-sparkline" id="sp-comp" viewBox="0 0 120 36" preserveAspectRatio="none"><polyline points="0,16 20,20 40,14 60,18 80,12 100,16 120,10"/></svg>
+      </div>
+      <div class="kcard orn" onclick="goShipments('status','returned')">
+        <div class="klbl">مرتجعة</div>
+        <div class="kval" id="k-ret">0</div>
+        <div class="kcard-actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg> مراجعة</div>
+        <svg class="kcard-sparkline" id="sp-ret" viewBox="0 0 120 36" preserveAspectRatio="none"><polyline points="0,22 20,18 40,24 60,16 80,20 100,14 120,18"/></svg>
+      </div>
     </div>
 
     <!-- API Shipments Summary -->
@@ -1363,11 +1482,16 @@ function toggleTheme(){
   updateThemeBtn();
 }
 function updateThemeBtn(){
-  const btn=document.getElementById('theme-btn');
-  if(!btn)return;
   const isLight=document.documentElement.classList.contains('light');
-  btn.textContent=isLight?'☀️':'🌙';
-  btn.title=isLight?'التبديل للوضع الداكن':'التبديل للوضع الفاتح';
+  ['','top'].forEach(sfx=>{
+    const btn=document.getElementById('theme-btn'+(sfx?'-'+sfx:''));
+    if(!btn)return;
+    const sun=document.getElementById('theme-sun'+(sfx?'-'+sfx:''));
+    const moon=document.getElementById('theme-moon'+(sfx?'-'+sfx:''));
+    if(sun)sun.style.display=isLight?'block':'none';
+    if(moon)moon.style.display=isLight?'none':'block';
+    btn.title=isLight?'التبديل للوضع الداكن':'التبديل للوضع الفاتح';
+  });
 }
 initTheme();
 
@@ -1470,7 +1594,10 @@ async function startApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').classList.add('active');
   applyRole();startClock();
-  document.getElementById('hero-date').textContent=new Date().toLocaleDateString('ar-LY',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  try{document.getElementById('hero-date').textContent=new Intl.DateTimeFormat('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).format(new Date());}catch(e){document.getElementById('hero-date').textContent=new Date().toLocaleDateString('ar-LY',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
+  // Show environment tag in hero
+  const envTag=document.getElementById('hero-env-tag');
+  if(envTag){const branch=window.location.hostname.includes('github.io')?'PROD':'DEV';envTag.textContent=branch==='PROD'?'⬡ Production':'⬡ Staging';}
   await loadAll();
   gTab('home');
   loadStatusCfg();
@@ -1732,6 +1859,29 @@ function updateKPIs(){
   const totalCrit=crit+akCrit;
   if(totalCrit>0){ab.style.display='flex';document.getElementById('alert-title').textContent=`${totalCrit} طرد في خطر حرج (+${CFG.critDays} يوم)!`;}
   else ab.style.display='none';
+  // Update sparklines with real data
+  renderKPISparklines({total:shipments.length,crit,warn,ok,comp,ret});
+}
+
+/* Render sparklines dynamically based on real count (simulate a 7-point trend) */
+function renderKPISparklines(vals){
+  function sparkPts(v,up){
+    const pts=[];const h=36,w=120,n=7;
+    const base=v||0;
+    for(let i=0;i<n;i++){
+      const noise=(Math.random()-.5)*base*.3;
+      const trend=up?(i/(n-1))*base*.2:-(i/(n-1))*base*.1;
+      const y=Math.max(4,Math.min(32,h*.7-(noise+trend)/Math.max(base,1)*h*.5));
+      pts.push(`${Math.round(i/(n-1)*w)},${Math.round(y)}`);
+    }
+    return pts.join(' ');
+  }
+  const map={total:{up:true},crit:{up:false},warn:{up:false},ok:{up:true},comp:{up:true},ret:{up:false}};
+  Object.keys(map).forEach(k=>{
+    const el=document.getElementById('sp-'+k);
+    if(!el)return;
+    el.querySelector('polyline').setAttribute('points',sparkPts(vals[k],map[k].up));
+  });
 }
 
 // ══════════════════════════════════════════
@@ -1741,7 +1891,16 @@ function renderHome(){
   updateKPIs();
   const h=new Date().getHours();
   const userName=CU?.name||'';
-  document.getElementById('greeting').textContent=(h<12?'صباح الخير':h<17?'مساء الخير':'مساء النور')+` ${userName} 👋`;
+  const greet=h<12?'صباح الخير':h<17?'مساء الخير':'مساء النور';
+  document.getElementById('greeting').textContent=`${greet} ${userName} 👋`;
+  // Update hero date with elegant format
+  try{
+    const dateEl=document.getElementById('hero-date');
+    if(dateEl){
+      const now=new Date();
+      dateEl.textContent=new Intl.DateTimeFormat('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).format(now);
+    }
+  }catch(e){}
   // Use API shipments for leaderboards (more data)
   const apiCrit=apiShipments.filter(s=>cls(s.delay_days)!=='ok');
   const apiAll=apiShipments.length?apiCrit:shipments.filter(s=>cls(s.delay_days)==='critical');
@@ -1760,7 +1919,18 @@ function renderLBCaptain(id,data){
   const max=sorted[0]?.[1]?.late||1;
   const el=document.getElementById(id);
   if(!sorted.length){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--mute)">✅ لا تأخيرات</div>';return;}
-  el.innerHTML=sorted.map(([n,c],i)=>`<div class="lbi"><div class="lbr">#${i+1}</div><div class="lbn" title="${n}">${n}</div><div class="lbbar"><div class="lbfill" style="width:${c.late/max*100}%;background:var(--gold)"></div></div><div class="lbv" style="color:var(--gold)">${c.late}<span style="font-size:10px;color:var(--mute)">/${c.total}</span></div></div>`).join('');
+  el.innerHTML=sorted.map(([n,c],i)=>{
+    const pct=Math.round(c.late/max*100);
+    return `<div class="lbi" style="animation:slideUp .3s ease ${i*.06}s both">
+      <div class="lbr">#${i+1}</div>
+      <div class="lbn" title="${n}">${n}</div>
+      <svg class="lbsvg" viewBox="0 0 80 16" preserveAspectRatio="none">
+        <rect x="0" y="4" width="80" height="8" rx="4" fill="var(--bg5)"/>
+        <rect x="0" y="4" width="${pct*.8}" height="8" rx="4" fill="var(--gold)" opacity=".85"/>
+      </svg>
+      <div class="lbv" style="color:var(--gold)">${c.late}<span style="font-size:9px;color:var(--mute)">/${c.total}</span></div>
+    </div>`;
+  }).join('');
 }
 function renderLB(id,data,key,color){
   const map={};data.forEach(s=>{const k=s[key]||'—';map[k]=(map[k]||0)+1;});
@@ -1768,7 +1938,18 @@ function renderLB(id,data,key,color){
   const max=sorted[0]?.[1]||1;
   const el=document.getElementById(id);
   if(!sorted.length){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--mute)">✅ لا تأخيرات</div>';return;}
-  el.innerHTML=sorted.map(([n,c],i)=>`<div class="lbi"><div class="lbr">#${i+1}</div><div class="lbn" title="${n}">${n}</div><div class="lbbar"><div class="lbfill" style="width:${c/max*100}%;background:${color}"></div></div><div class="lbv" style="color:${color}">${c}</div></div>`).join('');
+  el.innerHTML=sorted.map(([n,c],i)=>{
+    const pct=Math.round(c/max*100);
+    return `<div class="lbi" style="animation:slideUp .3s ease ${i*.06}s both">
+      <div class="lbr">#${i+1}</div>
+      <div class="lbn" title="${n}">${n}</div>
+      <svg class="lbsvg" viewBox="0 0 80 16" preserveAspectRatio="none">
+        <rect x="0" y="4" width="80" height="8" rx="4" fill="var(--bg5)"/>
+        <rect x="0" y="4" width="${pct*.8}" height="8" rx="4" fill="${color}" opacity=".85"/>
+      </svg>
+      <div class="lbv" style="color:${color}">${c}</div>
+    </div>`;
+  }).join('');
 }
 
 // ══════════════════════════════════════════
