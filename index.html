@@ -1911,7 +1911,24 @@ async function init(){
     ld.classList.add('hide');
     setTimeout(()=>ld.classList.add('gone'),450);
     const saved=sessionStorage.getItem('nu');
-    if(saved){CU=JSON.parse(saved);startApp();}
+    if(saved){
+      const cachedCU=JSON.parse(saved);
+      // Always refresh permissions from localStorage (USERS) so manager edits take effect immediately on refresh
+      const freshUser=USERS[cachedCU.username];
+      if(freshUser){
+        if(freshUser.status==='inactive'){
+          // Account was disabled — force logout
+          sessionStorage.removeItem('nu');
+          document.getElementById('login-screen').style.display='flex';
+          return;
+        }
+        CU={username:cachedCU.username,...freshUser};
+        sessionStorage.setItem('nu',JSON.stringify(CU));
+      } else {
+        CU=cachedCU; // user no longer in list, keep cached session
+      }
+      startApp();
+    }
     else document.getElementById('login-screen').style.display='flex';
   }catch(e){
     document.getElementById('lmsg').innerHTML=`<div style="color:var(--red);margin-bottom:10px">❌ تعذّر الاتصال بقاعدة البيانات</div><button onclick="location.reload()" class="btn btn-pur" style="margin:0 auto">↻ إعادة المحاولة</button>`;
@@ -1939,6 +1956,12 @@ async function startApp(){
 }
 
 function applyRole(){
+  // Re-read from USERS so any manager edits are reflected without full logout/login
+  if(CU&&USERS[CU.username]){
+    const fresh=USERS[CU.username];
+    CU.role=fresh.role;CU.perms=fresh.perms;CU.status=fresh.status;CU.name=fresh.name;
+    sessionStorage.setItem('nu',JSON.stringify(CU));
+  }
   const mgr=CU.role==='manager';
   const perms=CU.perms||['home','shipments','api-shipments'];
   document.getElementById('uname').textContent=CU.name;
