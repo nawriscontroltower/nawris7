@@ -93,10 +93,24 @@ table td:first-child{font-family:var(--mono);font-feature-settings:"tnum"}
 .kval{font-family:var(--mono)!important}
 
 /* ── LOADING ── */
-#loading{position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background-image:radial-gradient(ellipse 80% 55% at 50% 0%,rgba(155,109,255,.08),transparent)}
-.spinner{width:42px;height:42px;border:3px solid var(--rim2);border-top-color:var(--pur);border-radius:50%;animation:spin .7s linear infinite}
+#loading{position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;transition:opacity .4s ease}
+#loading.hide{opacity:0;pointer-events:none;display:flex}
+#loading.gone{display:none}
+.ld-logo{font-size:40px;margin-bottom:28px;animation:ldFade .6s ease both}
+.ld-brand{font-size:16px;font-weight:900;color:var(--pur);font-family:var(--ar-font);margin-bottom:36px;letter-spacing:.3px;animation:ldFade .6s ease .1s both}
+/* Thin ring spinner */
+.ld-ring{width:48px;height:48px;position:relative;animation:ldFade .5s ease .2s both}
+.ld-ring::before{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid rgba(124,77,255,.15)}
+.ld-ring::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid transparent;border-top-color:var(--pur);animation:spin .9s cubic-bezier(.4,0,.2,1) infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-#loading.hide{display:none}
+.ld-msg{font-size:12px;color:var(--mute);margin-top:18px;font-family:var(--ar-font);letter-spacing:.3px;animation:ldFade .5s ease .3s both}
+/* Pulsing dots under message */
+.ld-dots{display:inline-flex;gap:5px;margin-top:14px;animation:ldFade .5s ease .4s both}
+.ld-dots span{width:5px;height:5px;border-radius:50%;background:var(--pur);opacity:.4;animation:ldDot 1.4s ease infinite}
+.ld-dots span:nth-child(2){animation-delay:.2s}
+.ld-dots span:nth-child(3){animation-delay:.4s}
+@keyframes ldDot{0%,80%,100%{transform:scale(.6);opacity:.3}40%{transform:scale(1);opacity:1}}
+@keyframes ldFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── LOGIN ── */
 #login-screen{position:fixed;inset:0;z-index:8000;background:var(--bg);display:none;align-items:center;justify-content:center;background-image:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(155,109,255,.1),transparent)}
@@ -438,10 +452,11 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
 
 <!-- LOADING -->
 <div id="loading">
-  <div style="font-size:48px">🕊️</div>
-  <div class="spinner"></div>
-  <div style="color:var(--pur);font-weight:800;font-size:17px">النورس للشحن</div>
-  <div style="color:var(--mute);font-size:12px" id="lmsg">جارٍ الاتصال...</div>
+  <div class="ld-logo">🕊️</div>
+  <div class="ld-brand">النورس للشحن</div>
+  <div class="ld-ring"></div>
+  <div class="ld-msg" id="lmsg">جارٍ تحميل البيانات...</div>
+  <div class="ld-dots"><span></span><span></span><span></span></div>
 </div>
 
 <!-- LOGIN -->
@@ -1657,7 +1672,9 @@ async function init(){
   document.getElementById('lmsg').textContent='جارٍ الاتصال بـ Supabase...';
   try{
     await sb('settings','GET',null,'?select=key&limit=1');
-    document.getElementById('loading').classList.add('hide');
+    const ld=document.getElementById('loading');
+    ld.classList.add('hide');
+    setTimeout(()=>ld.classList.add('gone'),450);
     const saved=sessionStorage.getItem('nu');
     if(saved){CU=JSON.parse(saved);startApp();}
     else document.getElementById('login-screen').style.display='flex';
