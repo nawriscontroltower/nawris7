@@ -2848,13 +2848,28 @@ const MTITLES={regions:'🗺️ المناطق',branches:'🏢 الفروع',dri
 
 async function renderMasterContent(){
   const mc=document.getElementById('master-content');
-  mc.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:15px;font-weight:700">${MTITLES[masterSeg]}</span><button class="btn btn-pur btn-sm" onclick="openMAdd('${masterSeg}')">+ إضافة</button></div><div id="mt-wrap"><div style="text-align:center;padding:24px;color:var(--mute)">⏳ تحميل...</div></div>`;
+  const clearBtn=`<button class="btn btn-red btn-sm" onclick="deleteAllMaster('${masterSeg}')" style="gap:5px">🗑️ مسح الكل</button>`;
+  mc.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px"><span style="font-size:15px;font-weight:700">${MTITLES[masterSeg]}</span><div style="display:flex;gap:6px">${clearBtn}<button class="btn btn-pur btn-sm" onclick="openMAdd('${masterSeg}')">+ إضافة</button></div></div><div id="mt-wrap"><div style="text-align:center;padding:24px;color:var(--mute)">⏳ تحميل...</div></div>`;
   try{
-    const data=await sb(masterSeg,'GET',null,'?select=*&order=created_at.desc&limit=300');
+    const data=await sb(masterSeg,'GET',null,'?select=*&order=created_at.desc&limit=500');
     const flds=MF[masterSeg]||[];
     const labels={name:'الاسم',code:'الكود',description:'الوصف',manager_name:'المدير',manager_phone:'هاتف المدير',address:'العنوان',phone:'الهاتف',phone2:'هاتف2',vehicle_type:'وسيلة النقل'};
-    document.getElementById('mt-wrap').innerHTML=`<div class="tw"><table><thead><tr>${flds.map(f=>`<th>${labels[f.k]||f.k}</th>`).join('')}<th>إجراء</th></tr></thead><tbody>${data.length?data.map(r=>`<tr>${flds.map(f=>`<td>${r[f.k]||'—'}</td>`).join('')}<td><div style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm" onclick="openMEdit('${masterSeg}','${r.id}')">✏️</button><button class="btn btn-red btn-sm" onclick="deleteMaster('${masterSeg}','${r.id}')">🗑️</button></div></td></tr>`).join(''):'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--mute)">لا بيانات</td></tr>'}</tbody></table></div>`;
+    document.getElementById('mt-wrap').innerHTML=`<div style="font-size:11px;color:var(--mute);margin-bottom:8px">${data.length} سجل</div><div class="tw"><table><thead><tr>${flds.map(f=>`<th>${labels[f.k]||f.k}</th>`).join('')}<th>إجراء</th></tr></thead><tbody>${data.length?data.map(r=>`<tr>${flds.map(f=>`<td>${r[f.k]||'—'}</td>`).join('')}<td><div style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm" onclick="openMEdit('${masterSeg}','${r.id}')">✏️</button><button class="btn btn-red btn-sm" onclick="deleteMaster('${masterSeg}','${r.id}')">🗑️</button></div></td></tr>`).join(''):'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--mute)">لا بيانات</td></tr>'}</tbody></table></div>`;
   }catch(e){document.getElementById('mt-wrap').innerHTML=`<div style="color:var(--red);padding:16px">خطأ: ${e.message}</div>`;}
+}
+async function deleteAllMaster(table){
+  const title=MTITLES[table]||table;
+  if(!confirm(`⚠️ هل تريد حذف جميع سجلات "${title}"؟\nهذا الإجراء لا يمكن التراجع عنه!`))return;
+  try{
+    // Fetch all IDs first to build safe filter
+    const data=await sb(table,'GET',null,'?select=id&limit=1000');
+    if(!data.length){toast('لا يوجد سجلات للحذف','w');return;}
+    const ids=data.map(r=>r.id).join(',');
+    const r=await fetch(`${SB}/rest/v1/${table}?id=in.(${ids})`,{method:'DELETE',headers:H});
+    if(!r.ok)throw new Error(await r.text());
+    toast(`✅ تم حذف ${data.length} سجل من ${title}`,'s');
+    renderMasterContent();
+  }catch(e){toast('خطأ: '+e.message,'e');}
 }
 function openMAdd(table){
   meTable=table;meRecord=null;
