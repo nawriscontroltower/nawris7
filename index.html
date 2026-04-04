@@ -168,8 +168,9 @@ html.light .topbar{background:rgba(255,255,255,.9);border-bottom-color:var(--rim
 .tuname{font-size:12px;color:var(--pale)}
 .lout-btn{background:none;border:1px solid var(--rim);color:var(--mute);padding:4px 10px;border-radius:var(--r3);cursor:pointer;font-family:var(--font);font-size:11px}
 .lout-btn:hover{border-color:var(--red);color:var(--red)}
-.sb-toggle{display:none;background:none;border:1px solid var(--rim);color:var(--pale);width:34px;height:34px;border-radius:var(--r3);font-size:18px;cursor:pointer;align-items:center;justify-content:center}
+.sb-toggle{display:none;background:none;border:1px solid var(--rim);color:var(--pale);width:40px;height:40px;border-radius:var(--r3);font-size:20px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0}
 .sb-toggle:hover{border-color:var(--pur);color:var(--pur)}
+.sb-toggle:active{background:var(--prd);border-color:var(--pur)}
 
 /* ── MAIN CONTENT ── */
 .main-content{flex:1;min-width:0;width:calc(100% - 256px);margin-right:256px;display:flex;flex-direction:column;min-height:100vh;background:var(--bg);overflow-x:hidden}
@@ -208,7 +209,7 @@ tbody tr:nth-child(5){animation-delay:.1s}
 
 /* ── RESPONSIVE ── */
 @media(max-width:900px){
-  .sidebar{transform:translateX(100%);width:256px}
+  .sidebar{transform:translateX(100%);width:280px}
   .sidebar.open{transform:translateX(0)}
   .main-content{margin-right:0;width:100%}
   .sb-toggle{display:flex}
@@ -216,16 +217,117 @@ tbody tr:nth-child(5){animation-delay:.1s}
   .page{padding:14px}
   .api-kgrid{grid-template-columns:repeat(3,1fr)}
 }
+
+/* ═══════════════════════════════════════
+   MOBILE — Full Phone Experience
+   ═══════════════════════════════════════ */
 @media(max-width:640px){
+
+  /* --- Base layout --- */
   .page{padding:10px}
-  .api-kgrid{grid-template-columns:repeat(2,1fr)}
   .lb-grid{grid-template-columns:1fr}
-  .hero{padding:18px}
-  .kval{font-size:28px}
+  .hero{padding:18px 16px;margin-bottom:14px}
+  .hero-greeting{font-size:20px}
+  .kval{font-size:30px}
+  .kgrid{gap:10px;margin-bottom:14px}
+  .api-kgrid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .g2{grid-template-columns:1fr}
+
+  /* --- Topbar --- */
+  .topbar{height:52px;padding:0 14px;gap:8px}
+  .tclock{display:none}
+  .topbar-divider{display:none}
+  #sync-txt{display:none}
+  .sync-dot{display:none}
+
+  /* --- Sidebar --- */
+  .sidebar{width:100% !important}
+  .sb-item{padding:13px 16px;font-size:14px}
+  .sb-brand{padding:22px 18px 18px}
+  .sb-brand-text{font-size:16px}
+
+  /* --- Buttons — bigger touch targets --- */
+  .btn{min-height:42px;padding:9px 16px;font-size:13px}
+  .btn-sm{min-height:38px;padding:7px 13px;font-size:12px}
+  .btn-icon{width:38px;height:38px}
+
+  /* --- Inputs & selects --- */
+  .fi,.fi-grow{min-height:42px;font-size:14px;padding:10px 13px}
+  select.fi{min-height:42px}
+
+  /* --- Filters bar — stack vertically --- */
+  .fbar{flex-direction:column;gap:8px}
+  .fbar .fi{width:100% !important;min-width:0 !important}
+  .fbar .btn{width:100% !important;justify-content:center}
+
+  /* --- Segments — horizontal scroll --- */
+  .segs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .segs::-webkit-scrollbar{display:none}
+  .seg{flex-shrink:0;min-height:38px;display:flex;align-items:center}
+
+  /* --- Cards --- */
+  .card{padding:16px 14px;border-radius:16px}
+  .ctitle{font-size:14px}
+
+  /* --- Tables — horizontal scroll with sticky first col --- */
+  .tw{border-radius:12px}
+  table{font-size:12px}
+  thead th{padding:9px 10px;font-size:10px}
+  tbody td{padding:9px 10px}
+
+  /* --- Alert banner --- */
+  .alert-banner{padding:12px 14px;border-radius:14px;margin-bottom:14px}
+
+  /* --- Modal — full screen bottom sheet on mobile --- */
+  .overlay{padding:0;align-items:flex-end}
+  .modal{max-width:100%;max-height:92vh;border-radius:20px 20px 0 0;border-bottom:none}
+  .mh{padding:16px 18px;position:sticky;top:0;background:var(--bg3);z-index:1}
+  .mb{padding:16px 14px}
+
+  /* --- Assign panel — bottom sheet on mobile --- */
+  #assign-panel{
+    position:fixed !important;bottom:0;left:0;right:0;z-index:500;
+    margin:0 !important;border-radius:22px 22px 0 0 !important;
+    max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    border-right:none !important;border-top:3px solid var(--gold) !important;
+    border-bottom:none !important;border-left:none !important;
+    padding:16px 16px 40px;
+    box-shadow:0 -10px 50px rgba(0,0,0,.8);
+    background:var(--bg3) !important;
+    animation:sheetUp .3s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes sheetUp{from{transform:translateY(100%);opacity:.5}to{transform:translateY(0);opacity:1}}
+  #assign-panel::before{
+    content:'';display:block;width:44px;height:5px;
+    background:var(--rim2);border-radius:99px;
+    margin:0 auto 20px;
+  }
+  #assign-panel .btn{width:100% !important;justify-content:center;margin-bottom:6px}
+  #assign-panel select.fi,#assign-panel #manual-assign-emp{width:100% !important;min-width:0 !important}
+  #assign-panel #assign-emp-checks{flex-direction:column;gap:8px}
+  #assign-panel #assign-stats{grid-template-columns:1fr 1fr !important}
+  #assign-panel [style*="flex-wrap:wrap"]{flex-wrap:wrap !important}
+
+  /* --- Page headers --- */
+  .page-hdr{flex-direction:column;align-items:flex-start;gap:8px}
+  .page-title{font-size:17px}
+
+  /* --- Leaderboard --- */
+  .lbsvg{width:60px}
+
+  /* --- KPI sparkline --- */
+  .kcard-sparkline{height:36px}
+
+  /* --- Hero progress bar --- */
+  .hprog-track{margin-top:10px}
 }
+
+/* Very small phones */
 @media(max-width:400px){
   .kgrid{grid-template-columns:1fr}
   .api-kgrid{grid-template-columns:1fr}
+  .btn{font-size:12px}
+  .kval{font-size:26px}
 }
 
 /* ── HERO ── */
@@ -524,6 +626,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
     </div>
   </aside>
   <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+  <div class="sb-overlay" id="assign-backdrop" style="z-index:499" onclick="closeAssignPanel()"></div>
 
   <!-- Main Content -->
   <div class="main-content">
@@ -4690,7 +4793,13 @@ function clearAllAssignments(){
 
 // ── PANEL ──
 function openAssignPanel(){
-  document.getElementById('assign-panel').style.display='block';
+  const panel=document.getElementById('assign-panel');
+  panel.style.display='block';
+  if(window.innerWidth<=640){
+    document.getElementById('assign-backdrop').classList.add('on');
+    document.body.style.overflow='hidden';
+    setTimeout(()=>panel.scrollTop=0,50);
+  }
   renderAssignStats();
   refreshAssignPanelEmps();
 }
@@ -4711,12 +4820,13 @@ function refreshAssignPanelEmps(){
 
   // Employee checkboxes as cards
   const checksEl=document.getElementById('assign-emp-checks');
+  const isMob=window.innerWidth<=640;
   if(checksEl)checksEl.innerHTML=emps.map(u=>`
-    <label style="display:flex;align-items:center;gap:6px;background:var(--bg4);border:1px solid var(--rim);border-radius:var(--r2);padding:7px 12px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--pur)'" onmouseout="this.style.borderColor='var(--rim)'">
-      <input type="checkbox" value="${u.name}" checked style="accent-color:var(--pur);width:13px;height:13px">
-      <span style="font-size:12px;font-weight:700;color:var(--white)">${u.name}</span>
-      <span style="font-size:10px;color:var(--mute)">${u.role==='manager'?'مدير':'موظف'}</span>
-      <span style="font-size:10px;font-family:var(--mono);color:var(--pur);margin-right:auto">${counts[u.name]||0} طرد</span>
+    <label style="display:flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--rim);border-radius:var(--r2);padding:${isMob?'12px 14px':'7px 12px'};cursor:pointer;transition:border-color .15s;min-height:${isMob?'48px':'auto'}" onmouseover="this.style.borderColor='var(--pur)'" onmouseout="this.style.borderColor='var(--rim)'">
+      <input type="checkbox" value="${u.name}" checked style="accent-color:var(--pur);width:${isMob?'18px':'13px'};height:${isMob?'18px':'13px'};flex-shrink:0">
+      <span style="font-size:${isMob?'14px':'12px'};font-weight:700;color:var(--white)">${u.name}</span>
+      <span style="font-size:11px;color:var(--mute)">${u.role==='manager'?'مدير':'موظف'}</span>
+      <span style="font-size:11px;font-family:var(--mono);color:var(--pur);margin-right:auto">${counts[u.name]||0} طرد</span>
     </label>`).join('');
 
   // Manual assign dropdown
@@ -4724,7 +4834,11 @@ function refreshAssignPanelEmps(){
   if(manEl)manEl.innerHTML='<option value="">اختر موظف...</option>'+emps.map(u=>`<option value="${u.name}">${u.name} (${counts[u.name]||0} طرد)</option>`).join('');
 }
 
-function closeAssignPanel(){document.getElementById('assign-panel').style.display='none';}
+function closeAssignPanel(){
+  document.getElementById('assign-panel').style.display='none';
+  document.getElementById('assign-backdrop').classList.remove('on');
+  document.body.style.overflow='';
+}
 
 function renderAssignStats(){
   const a=getAPIAssignments();
