@@ -1280,6 +1280,53 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       </div>
       <div id="staff-assign-stats"></div>
     </div>
+
+    <!-- ══ COMPLETE SHIPMENTS TABLE ══ -->
+    <div class="card" style="margin-top:12px;border-right:3px solid var(--grn)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="ctitle" style="margin-bottom:0">📋 جدول الطرود الكاملة</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="badge b-grn" id="sf-cnt">0 طرد</span>
+          <select class="fi" id="sf-femp" onchange="renderStaffShipments()" style="font-size:11px;min-width:130px"><option value="">كل الموظفين</option></select>
+          <select class="fi" id="sf-fres" onchange="renderStaffShipments()" style="font-size:11px;min-width:130px">
+            <option value="">كل النتائج</option>
+            <option value="none">⬜ بدون متابعة</option>
+            <option value="solved">✅ تم الحل</option>
+            <option value="contacted">📞 تم التواصل</option>
+            <option value="no_answer">📵 لا يرد</option>
+            <option value="pending">⏳ قيد المتابعة</option>
+          </select>
+          <input class="fi" id="sf-q" type="text" placeholder="🔍 بحث..." oninput="renderStaffShipments()" style="font-size:11px;min-width:160px">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sf-q').value='';document.getElementById('sf-femp').selectedIndex=0;document.getElementById('sf-fres').selectedIndex=0;renderStaffShipments()">✕ مسح</button>
+        </div>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr>
+            <th>#</th>
+            <th>المتجر / العميل</th>
+            <th>الكود</th>
+            <th>المندوب</th>
+            <th class="mob-hide">الفرع</th>
+            <th>الحالة</th>
+            <th>التأخير</th>
+            <th>نتيجة المتابعة</th>
+            <th class="mob-hide">ملاحظة</th>
+            <th class="mob-hide">آخر متابعة (بواسطة)</th>
+          </tr></thead>
+          <tbody id="sf-tbody"><tr><td colspan="10" style="text-align:center;padding:32px;color:var(--mute)">جارٍ التحميل...</td></tr></tbody>
+        </table>
+      </div>
+      <div style="padding:10px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--mute)" id="sf-pginfo">—</span>
+        <select class="fi" id="sf-per" onchange="sfPage=1;renderStaffShipments()" style="font-size:11px;padding:3px 8px;min-width:auto">
+          <option value="25">25</option><option value="50" selected>50</option><option value="100">100</option>
+        </select>
+        <span style="font-size:11px;color:var(--mute)">لكل صفحة</span>
+        <div style="flex:1"></div>
+        <div class="pgn" id="sf-pgn"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ══ MASTER DATA ══ -->
@@ -3527,7 +3574,7 @@ function gTab(id){
     janzour:()=>{buildJanzourSet();renderJanzour();},
     whatsapp:renderWA,
     reports:genDaily,
-    staff:renderStaff,
+    staff:()=>{sfPage=1;renderStaff();},
     master:()=>{setMasterSeg(masterSeg);renderMasterContent();setTimeout(renderStatusLists,100);},
     upload:()=>{loadDbStats();},
     users:renderUsersPage,
@@ -3839,6 +3886,111 @@ function renderStaff(){
       </table></div>`;
     }
   }
+
+  // ── Call complete shipments table renderer ──
+  renderStaffShipments();
+}
+
+// ══════════════════════════════════════════
+// STAFF COMPLETE SHIPMENTS TABLE
+// ══════════════════════════════════════════
+function renderStaffShipments(){
+  const tbody=document.getElementById('sf-tbody');
+  if(!tbody)return;
+
+  const q=(document.getElementById('sf-q')?.value||'').trim().toLowerCase();
+  const fRes=document.getElementById('sf-fres')?.value||'';
+  const fEmp=document.getElementById('sf-femp')?.value||'';
+  const perSel=parseInt(document.getElementById('sf-per')?.value||'50',10);
+  const assignments=getAPIAssignments();
+
+  // Build employee dropdown once
+  const empSel=document.getElementById('sf-femp');
+  if(empSel&&empSel.options.length<=1){
+    const names=new Set();
+    contact_results_db.forEach(r=>{if(r.updated_by)names.add(r.updated_by);});
+    Object.values(USERS).forEach(u=>names.add(u.name));
+    apiShipments.forEach(s=>{const e=assignments[s.tracking_code];if(e)names.add(e);});
+    names.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;empSel.appendChild(o);});
+  }
+
+  // Merge API + Supabase shipments into flat list
+  const crLabels={solved:'✅ تم الحل',contacted:'📞 تم التواصل',no_answer:'📵 لا يرد',pending:'⏳ قيد المتابعة'};
+  const statusLabels={with_driver:'مع المندوب',in_company:'في الشركة',delivered:'تم التسليم',returned:'مرتجع',partially_delivered:'تسليم جزئي'};
+
+  let list=apiShipments.map(s=>{
+    const cr=getCR(s.id);
+    const emp=assignments[s.tracking_code]||'—';
+    return{
+      code:s.tracking_code||'—',
+      store:s.client_name||'—',
+      captain:s.captain||'—',
+      branch:s.current_branch||'—',
+      status:s.status||'—',
+      delay:s.delay_days??0,
+      crResult:cr.result||'',
+      crNote:cr.note||'',
+      crBy:cr.by||emp,
+      _src:'api'
+    };
+  });
+
+  // Filter
+  if(q){list=list.filter(s=>s.code.toLowerCase().includes(q)||s.store.toLowerCase().includes(q)||s.captain.toLowerCase().includes(q)||s.branch.toLowerCase().includes(q));}
+  if(fRes==='none'){list=list.filter(s=>!s.crResult);}
+  else if(fRes){list=list.filter(s=>s.crResult===fRes);}
+  if(fEmp){list=list.filter(s=>s.crBy===fEmp);}
+
+  const total=list.length;
+  document.getElementById('sf-cnt').textContent=total+' طرد';
+
+  const totalP=Math.max(1,Math.ceil(total/perSel));
+  if(sfPage>totalP)sfPage=1;
+  const start=(sfPage-1)*perSel;
+  const page=list.slice(start,start+perSel);
+
+  // Pagination info
+  const pgInfo=document.getElementById('sf-pginfo');
+  if(pgInfo)pgInfo.textContent=`عرض ${start+1}–${Math.min(start+perSel,total)} من ${total}`;
+
+  // Pagination buttons
+  const pgnEl=document.getElementById('sf-pgn');
+  if(pgnEl){
+    let ph='';
+    const maxBtn=5;
+    const half=Math.floor(maxBtn/2);
+    let sP=Math.max(1,sfPage-half);
+    let eP=Math.min(totalP,sP+maxBtn-1);
+    if(eP-sP<maxBtn-1)sP=Math.max(1,eP-maxBtn+1);
+    if(sfPage>1)ph+=`<button class="pgbtn" onclick="sfPage=1;renderStaffShipments()">«</button><button class="pgbtn" onclick="sfPage--;renderStaffShipments()">‹</button>`;
+    for(let i=sP;i<=eP;i++)ph+=`<button class="pgbtn${i===sfPage?' on':''}" onclick="sfPage=${i};renderStaffShipments()">${i}</button>`;
+    if(sfPage<totalP)ph+=`<button class="pgbtn" onclick="sfPage++;renderStaffShipments()">›</button><button class="pgbtn" onclick="sfPage=${totalP};renderStaffShipments()">»</button>`;
+    pgnEl.innerHTML=ph;
+  }
+
+  if(!page.length){
+    tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--mute)">لا توجد طرود تطابق الفلتر</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML=page.map((s,i)=>{
+    const clsC=s.delay>14?'var(--red)':s.delay>7?'var(--gold)':'var(--grn)';
+    const crColor=s.crResult==='solved'?'var(--grn)':s.crResult==='contacted'?'var(--blu)':s.crResult==='no_answer'?'var(--red)':s.crResult==='pending'?'var(--gold)':'var(--mute)';
+    const statusLabel=statusLabels[s.status]||s.status;
+    const stBadge=s.status==='with_driver'?'b-gold':s.status==='in_company'?'b-pur':s.status==='delivered'?'b-grn':s.status==='returned'?'b-red':'b-orn';
+    return`<tr>
+      <td style="color:var(--dim);font-size:11px">${start+i+1}</td>
+      <td style="max-width:160px"><div style="font-weight:700;font-size:13px;line-height:1.3">${s.store}</div></td>
+      <td><span class="code-cell" style="font-size:11px">${s.code}</span></td>
+      <td><div style="font-size:12px;font-weight:600">${s.captain}</div></td>
+      <td class="mob-hide" style="font-size:11px;color:var(--dim)">${s.branch}</td>
+      <td><span class="badge ${stBadge}" style="font-size:10px">${statusLabel}</span></td>
+      <td style="font-family:var(--mono);font-weight:800;color:${clsC}">${s.delay}يوم</td>
+      <td><span style="color:${crColor};font-weight:700;font-size:12px">${crLabels[s.crResult]||'—'}</span></td>
+      <td class="mob-hide" style="font-size:11px;color:var(--pale);max-width:140px">${s.crNote||'—'}</td>
+      <td class="mob-hide" style="font-size:11px;color:var(--dim)">${s.crBy&&s.crBy!=='—'?s.crBy:'—'}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ══════════════════════════════════════════
@@ -3943,6 +4095,7 @@ let JANZOUR_STORES_SEED=[
 let janzourStoreSet=new Set(); // lowercase+trimmed for fast O(1) lookup
 let janzourShipments=[];       // filtered subset — NEVER modified by API tab
 let janzourSeg='all', jPage=1, jPER=25;
+let sfPage=1; // Staff shipments table page
 
 function buildJanzourSet(){
   // Prefer live Supabase stores list over seed
