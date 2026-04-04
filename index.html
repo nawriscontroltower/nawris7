@@ -1151,8 +1151,8 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       <div class="kcard orn"><div class="klbl">متاجر نشطة</div><div class="kval" id="jk-stores">0</div></div>
     </div>
 
-    <!-- Segments -->
-    <div class="segs" id="j-segs">
+    <!-- Segments: delay status -->
+    <div class="segs" id="j-segs" style="margin-bottom:6px">
       <div class="seg on" data-jseg="all">الكل <span class="seg-n" id="jsn-all">0</span></div>
       <div class="seg" data-jseg="critical">🔴 حرج <span class="seg-n" id="jsn-crit">0</span></div>
       <div class="seg" data-jseg="warning">🟡 تحذير <span class="seg-n" id="jsn-warn">0</span></div>
@@ -1161,8 +1161,18 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       <div class="seg" data-jseg="company">🏢 في الشركة <span class="seg-n" id="jsn-comp">0</span></div>
     </div>
 
+    <!-- Segments: contact result filter -->
+    <div class="segs" id="j-cr-segs" style="margin-bottom:10px">
+      <div class="seg on" data-jcrseg="all">📋 كل المتابعات</div>
+      <div class="seg" data-jcrseg="none">⬜ لم تتم المتابعة</div>
+      <div class="seg" data-jcrseg="solved">✅ تم الحل</div>
+      <div class="seg" data-jcrseg="contacted">📞 تم التواصل</div>
+      <div class="seg" data-jcrseg="no_answer">📵 لا يرد</div>
+      <div class="seg" data-jcrseg="pending">⏳ قيد المتابعة</div>
+    </div>
+
     <!-- Filters — isolated from API tab -->
-    <div class="fbar" style="margin-top:10px">
+    <div class="fbar" style="margin-top:4px">
       <input class="fi fi-grow" id="j-q" type="text" placeholder="🔍 بحث بالمتجر، الكود، المندوب..." oninput="renderJanzour()">
       <select class="fi" id="j-fcap" onchange="renderJanzour()"><option value="">كل المناديب</option></select>
       <button class="btn btn-ghost btn-sm" onclick="resetJanzourFilters()">✕ مسح</button>
@@ -1178,9 +1188,10 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
           <th>#</th><th>المتجر / العميل</th><th>الكود</th>
           <th>المندوب</th><th class="mob-hide">الفرع</th>
           <th class="mob-hide">المحافظة</th><th>الحالة</th><th>التأخير</th>
+          <th>نتيجة المتابعة</th><th class="mob-hide">ملاحظة</th><th>حفظ</th>
           <th>واتساب</th>
         </tr></thead>
-        <tbody id="j-tbody"><tr><td colspan="9" style="text-align:center;padding:32px;color:var(--mute)">اضغط "جلب الآن" في طرود API لتحميل البيانات</td></tr></tbody>
+        <tbody id="j-tbody"><tr><td colspan="12" style="text-align:center;padding:32px;color:var(--mute)">اضغط "جلب الآن" في طرود API لتحميل البيانات</td></tr></tbody>
       </table>
     </div>
     <div style="padding:10px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -2095,7 +2106,8 @@ function getCR(sid){
   return{result:local,note:localStorage.getItem('note_'+sid)||'',by:''};
 }
 async function saveCR(sid,result,note){
-  const s=shipments.find(x=>String(x.id)===String(sid));
+  const s=shipments.find(x=>String(x.id)===String(sid))
+         ||apiShipments.find(x=>String(x.id)===String(sid));
   const userName=CU?.name||'—';
   const payload={shipment_id:String(sid),tracking_code:s?.tracking_code||'',result:result||'',note:note||'',updated_by:userName};
   try{
@@ -4163,7 +4175,7 @@ let JANZOUR_STORES_SEED=[
 ];
 let janzourStoreSet=new Set(); // lowercase+trimmed for fast O(1) lookup
 let janzourShipments=[];       // filtered subset — NEVER modified by API tab
-let janzourSeg='all', jPage=1, jPER=25;
+let janzourSeg='all', janzourCrSeg='all', jPage=1, jPER=25;
 let sfPage=1; // Staff shipments table page
 
 function buildJanzourSet(){
@@ -4612,12 +4624,21 @@ function setJSeg(s){
   document.querySelectorAll('[data-jseg]').forEach(el=>el.classList.toggle('on',el.dataset.jseg===s));
   renderJanzour();
 }
+function setJCrSeg(s){
+  janzourCrSeg=s;jPage=1;
+  document.querySelectorAll('[data-jcrseg]').forEach(el=>el.classList.toggle('on',el.dataset.jcrseg===s));
+  renderJanzour();
+}
 document.addEventListener('click',e=>{
   const jseg=e.target.closest('[data-jseg]');
-  if(jseg)setJSeg(jseg.dataset.jseg);
+  if(jseg){setJSeg(jseg.dataset.jseg);return;}
+  const jcrseg=e.target.closest('[data-jcrseg]');
+  if(jcrseg)setJCrSeg(jcrseg.dataset.jcrseg);
 });
 function resetJanzourFilters(){
   ['j-q','j-fcap'].forEach(id=>{const el=document.getElementById(id);if(el){if(el.tagName==='INPUT')el.value='';else el.selectedIndex=0;}});
+  janzourCrSeg='all';
+  document.querySelectorAll('[data-jcrseg]').forEach(el=>el.classList.toggle('on',el.dataset.jcrseg==='all'));
   setJSeg('all');
 }
 
@@ -4674,6 +4695,13 @@ function renderJanzour(){
   if(fcap)list=list.filter(s=>s.captain===fcap);
   if(q)list=list.filter(s=>`${s.client_name} ${s.tracking_code} ${s.captain} ${s.current_branch}`.toLowerCase().includes(q));
 
+  // ── CR filter ──
+  if(janzourCrSeg==='none')list=list.filter(s=>!getCR(s.id).result);
+  else if(janzourCrSeg==='solved')list=list.filter(s=>getCR(s.id).result==='solved');
+  else if(janzourCrSeg==='contacted')list=list.filter(s=>getCR(s.id).result==='contacted');
+  else if(janzourCrSeg==='no_answer')list=list.filter(s=>getCR(s.id).result==='no_answer');
+  else if(janzourCrSeg==='pending')list=list.filter(s=>getCR(s.id).result==='pending');
+
   list.sort((a,b)=>b.delay_days-a.delay_days);
 
   const total=list.length;
@@ -4684,25 +4712,52 @@ function renderJanzour(){
   const el=id=>document.getElementById(id);
   if(el('j-cnt'))el('j-cnt').textContent=total+' طرد';
 
+  const crOpts=`<option value="">— نتيجة —</option><option value="solved">✅ تم الحل</option><option value="contacted">📞 تم التواصل</option><option value="no_answer">📵 لا يرد</option><option value="pending">⏳ قيد المتابعة</option>`;
+
   const tbody=el('j-tbody');
   if(!page.length){
-    tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--mute)">${janzourShipments.length?'🔍 لا نتائج مطابقة':'🔌 اضغط "جلب الآن" في طرود API لتحميل البيانات'}</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--mute)">${janzourShipments.length?'🔍 لا نتائج مطابقة':'🔌 اضغط "جلب الآن" في طرود API لتحميل البيانات'}</td></tr>`;
   } else {
     tbody.innerHTML=page.map((s,i)=>{
       const ph=s.customer_phone&&s.customer_phone!=='—'&&s.customer_phone!=='undefined';
       const waBtn=ph?`<button class="btn btn-wa btn-sm" onclick="apiWA('${s.id}','receiver')" style="font-size:10px;padding:3px 6px">📱</button>`:'';
-      return`<tr class="pr" onclick="openAPIDetail('${s.id}')" style="cursor:pointer;${cls(s.delay_days)==='critical'?'background:rgba(255,58,92,.04)':''}">
-        <td style="color:var(--dim);font-size:10px">${(jPage-1)*jPER+i+1}</td>
-        <td style="font-weight:700;color:var(--white);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.client_name}">${s.client_name||'—'}</td>
-        <td class="code-cell">${s.tracking_code}</td>
-        <td style="font-size:11px">${s.captain||'—'}</td>
-        <td class="mob-hide" style="font-size:11px;color:var(--mute)">${s.current_branch||'—'}</td>
-        <td class="mob-hide" style="font-size:11px;color:var(--pale)">${s.government||'—'}</td>
-        <td>${stBadge(s.status)}</td>
-        <td>${dBadge(s.delay_days)}</td>
+      const crData=getCR(s.id);
+      const crColor=crData.result==='solved'?'var(--grn)':crData.result==='contacted'?'var(--blu)':crData.result==='no_answer'?'var(--red)':crData.result==='pending'?'var(--gold)':'';
+      const sid=s.id.replace(/'/g,"\\'");
+      return`<tr class="pr" style="${cls(s.delay_days)==='critical'?'background:rgba(255,58,92,.04)':''}">
+        <td style="color:var(--dim);font-size:10px" onclick="openAPIDetail('${sid}')">${(jPage-1)*jPER+i+1}</td>
+        <td style="font-weight:700;color:var(--white);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" title="${s.client_name}" onclick="openAPIDetail('${sid}')">${s.client_name||'—'}</td>
+        <td class="code-cell" style="cursor:pointer" onclick="openAPIDetail('${sid}')">${s.tracking_code}</td>
+        <td style="font-size:11px;cursor:pointer" onclick="openAPIDetail('${sid}')">${s.captain||'—'}</td>
+        <td class="mob-hide" style="font-size:11px;color:var(--mute);cursor:pointer" onclick="openAPIDetail('${sid}')">${s.current_branch||'—'}</td>
+        <td class="mob-hide" style="font-size:11px;color:var(--pale);cursor:pointer" onclick="openAPIDetail('${sid}')">${s.government||'—'}</td>
+        <td style="cursor:pointer" onclick="openAPIDetail('${sid}')">${stBadge(s.status)}</td>
+        <td style="cursor:pointer" onclick="openAPIDetail('${sid}')">${dBadge(s.delay_days)}</td>
+        <td onclick="event.stopPropagation()" style="min-width:130px">
+          <select class="fi" id="jcr-${i}" style="font-size:11px;padding:3px 6px;min-width:128px;border-color:${crColor||'var(--rim)'};color:${crColor||'inherit'}" onchange="document.getElementById('jcr-${i}').style.color=this.value?'':'inherit'">
+            ${crOpts}
+          </select>
+        </td>
+        <td class="mob-hide" onclick="event.stopPropagation()">
+          <input class="fi" id="jnote-${i}" type="text" placeholder="ملاحظة..." value="${(crData.note||'').replace(/"/g,'&quot;')}" style="font-size:11px;padding:3px 6px;min-width:110px">
+        </td>
+        <td onclick="event.stopPropagation()">
+          <button class="btn btn-pur btn-sm" onclick="saveJanzourCR('${sid}',${i})" style="font-size:10px;padding:4px 8px;white-space:nowrap">💾 حفظ</button>
+        </td>
         <td onclick="event.stopPropagation()">${waBtn}</td>
       </tr>`;
     }).join('');
+    // Set selected CR values after rendering
+    page.forEach((s,i)=>{
+      const sel=document.getElementById('jcr-'+i);
+      if(sel){
+        const cr=getCR(s.id);
+        sel.value=cr.result||'';
+        const c=cr.result==='solved'?'var(--grn)':cr.result==='contacted'?'var(--blu)':cr.result==='no_answer'?'var(--red)':cr.result==='pending'?'var(--gold)':'';
+        sel.style.color=c;
+        sel.style.borderColor=c||'var(--rim)';
+      }
+    });
   }
 
   // Build pagination
@@ -4716,6 +4771,22 @@ function renderJanzour(){
       b.className='pgbtn'+(i===jPage?' on':'');b.textContent=i;
       b.onclick=()=>{jPage=i;renderJanzour();};pgn.appendChild(b);
     }
+  }
+}
+
+async function saveJanzourCR(sid,rowIdx){
+  const sel=document.getElementById('jcr-'+rowIdx);
+  const noteEl=document.getElementById('jnote-'+rowIdx);
+  const result=sel?sel.value:'';
+  const note=noteEl?noteEl.value.trim():'';
+  const btn=document.querySelector(`button[onclick="saveJanzourCR('${sid}',${rowIdx})"]`);
+  if(btn){btn.textContent='⏳';btn.disabled=true;}
+  await saveCR(sid,result,note);
+  if(btn){btn.textContent='✅';setTimeout(()=>{btn.textContent='💾 حفظ';btn.disabled=false;},1200);}
+  // Update dropdown color
+  if(sel){
+    const c=result==='solved'?'var(--grn)':result==='contacted'?'var(--blu)':result==='no_answer'?'var(--red)':result==='pending'?'var(--gold)':'';
+    sel.style.color=c;sel.style.borderColor=c||'var(--rim)';
   }
 }
 
