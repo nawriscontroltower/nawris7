@@ -1251,38 +1251,9 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:16px" id="staff-kpis"></div>
-    <div class="card">
-      <div class="ctitle">📋 أداء الموظفين اليوم</div>
-      <div class="tw">
-        <table>
-          <thead><tr><th>الموظف</th><th>طرود تمت متابعتها</th><th>✅ تم الحل</th><th>📞 تم التواصل</th><th>📵 لا يرد</th><th>⏳ قيد المتابعة</th><th>نسبة الإنجاز</th></tr></thead>
-          <tbody id="staff-tbody"><tr><td colspan="7" style="text-align:center;padding:36px;color:var(--mute)">لا بيانات</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card" style="margin-top:12px">
-      <div class="ctitle">📊 ملخص نتائج التواصل لكل الطرود</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px" id="staff-cr-summary"></div>
-    </div>
-    <!-- API Captains Performance -->
-    <div class="card" style="margin-top:12px;border-right:3px solid var(--pur)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="ctitle" style="margin-bottom:0">🔗 أداء المناديب — طرود API</div>
-        <span id="staff-api-total" class="badge b-pur">0 طرد</span>
-      </div>
-      <div id="staff-api-captains"></div>
-    </div>
-    <!-- Employee API Assignment Summary -->
-    <div class="card" style="margin-top:12px;border-right:3px solid var(--gold)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-        <div class="ctitle" style="margin-bottom:0">👥 توزيع طرود API على الموظفين</div>
-        <button class="btn btn-ghost btn-sm" onclick="gTab('api-shipments');setTimeout(openAssignPanel,200)">⚙️ إدارة التوزيع</button>
-      </div>
-      <div id="staff-assign-stats"></div>
-    </div>
 
-    <!-- ══ COMPLETE SHIPMENTS TABLE ══ -->
-    <div class="card" style="margin-top:12px;border-right:3px solid var(--grn)">
+    <!-- ══ COMPLETE SHIPMENTS TABLE — Primary View ══ -->
+    <div class="card" style="margin-bottom:12px;border-right:3px solid var(--grn)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <div class="ctitle" style="margin-bottom:0">📋 جدول الطرود الكاملة</div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1327,6 +1298,37 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <div class="pgn" id="sf-pgn"></div>
       </div>
     </div>
+
+    <div class="card">
+      <div class="ctitle">📋 أداء الموظفين اليوم</div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>الموظف</th><th>طرود تمت متابعتها</th><th>✅ تم الحل</th><th>📞 تم التواصل</th><th>📵 لا يرد</th><th>⏳ قيد المتابعة</th><th>نسبة الإنجاز</th></tr></thead>
+          <tbody id="staff-tbody"><tr><td colspan="7" style="text-align:center;padding:36px;color:var(--mute)">لا بيانات</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="ctitle">📊 ملخص نتائج التواصل لكل الطرود</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px" id="staff-cr-summary"></div>
+    </div>
+    <!-- API Captains Performance -->
+    <div class="card" style="margin-top:12px;border-right:3px solid var(--pur)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="ctitle" style="margin-bottom:0">🔗 أداء المناديب — طرود API</div>
+        <span id="staff-api-total" class="badge b-pur">0 طرد</span>
+      </div>
+      <div id="staff-api-captains"></div>
+    </div>
+    <!-- Employee API Assignment Summary -->
+    <div class="card" style="margin-top:12px;border-right:3px solid var(--gold)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div class="ctitle" style="margin-bottom:0">👥 توزيع طرود API على الموظفين</div>
+        <button class="btn btn-ghost btn-sm" onclick="gTab('api-shipments');setTimeout(openAssignPanel,200)">⚙️ إدارة التوزيع</button>
+      </div>
+      <div id="staff-assign-stats"></div>
+    </div>
+
   </div>
 
   <!-- ══ MASTER DATA ══ -->
