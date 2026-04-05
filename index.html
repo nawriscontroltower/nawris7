@@ -4003,41 +4003,6 @@ async function renderStaff(){
 // STAFF COMPLETE SHIPMENTS TABLE
 // ══════════════════════════════════════════
 function normEmpName(n){return String(n||'').replace(/\s+/g,' ').trim();}
-function crIdsEquivalent(a,b){
-  const x=String(a),y=String(b);
-  if(x===y)return true;
-  const cx=x.replace(/^api_/i,''),cy=y.replace(/^api_/i,'');
-  if(cx&&cx===cy)return true;
-  const ax=findApiShipmentForCrSid(x),ay=findApiShipmentForCrSid(y);
-  if(ax&&ay&&String(ax.id)===String(ay.id))return true;
-  if(ax&&(String(ax.id)===y||String(ax.tracking_code)===y||('api_'+String(ax.tracking_code))===y))return true;
-  if(ay&&(String(ay.id)===x||String(ay.tracking_code)===x||('api_'+String(ay.tracking_code))===x))return true;
-  return false;
-}
-function crUpdatedByMatches(rowSid,empName){
-  const w=normEmpName(empName);if(!w)return false;
-  return contact_results_db.some(r=>normEmpName(r.updated_by)===w&&crIdsEquivalent(rowSid,r.shipment_id));
-}
-/** Match API row to contact_results.shipment_id (يدعم api_كود أو الكود وحده) */
-function findApiShipmentForCrSid(sid){
-  const s=String(sid);
-  let x=apiShipments.find(a=>String(a.id)===s);
-  if(x)return x;
-  x=apiShipments.find(a=>String(a.tracking_code)===s);
-  if(x)return x;
-  if(s.startsWith('api_')){const code=s.slice(4);x=apiShipments.find(a=>String(a.tracking_code)===code);}
-  if(x)return x;
-  const withP='api_'+s.replace(/^api_/i,'');
-  return apiShipments.find(a=>String(a.id)===withP)||null;
-}
-/** مفتاح موحّد لتفادي تكرار الصف (كود فقط vs api_كود) */
-function canonicalStaffRowSid(shipmentId){
-  const apiS=findApiShipmentForCrSid(shipmentId);
-  if(apiS)return String(apiS.id);
-  const sbS=shipments.find(x=>String(x.id)===String(shipmentId));
-  if(sbS)return String(sbS.id);
-  return String(shipmentId);
-}
 
 function renderStaffShipments(){
   const tbody=document.getElementById('sf-tbody');
@@ -4049,6 +4014,46 @@ function renderStaffShipments(){
   const fSrc=document.getElementById('sf-fsrc')?.value||'';
   const perSel=parseInt(document.getElementById('sf-per')?.value||'50',10);
   const assignments=getAPIAssignments();
+
+  // ── O(1) lookups — تجنّب .find على آلاف الطرود (كان يسبب تجميد الصفحة)
+  const apiById=new Map();
+  const apiByCode=new Map();
+  for(const s of apiShipments){
+    apiById.set(String(s.id),s);
+    if(s.tracking_code!=null&&s.tracking_code!=='')apiByCode.set(String(s.tracking_code),s);
+  }
+  const shipById=new Map(shipments.map(s=>[String(s.id),s]));
+  function findApiFast(sid){
+    const s=String(sid);
+    let x=apiById.get(s);
+    if(x)return x;
+    x=apiByCode.get(s);
+    if(x)return x;
+    if(s.toLowerCase().startsWith('api_')){
+      const c=s.slice(4);
+      x=apiByCode.get(c);
+      if(x)return x;
+    }
+    const p='api_'+s.replace(/^api_/i,'');
+    return apiById.get(p)||null;
+  }
+  function canonSid(sid){
+    const apiS=findApiFast(sid);
+    if(apiS)return String(apiS.id);
+    const sb=shipById.get(String(sid));
+    if(sb)return String(sb.id);
+    return String(sid);
+  }
+
+  let crCanonForEmp=null;
+  if(fEmp){
+    const w=normEmpName(fEmp);
+    crCanonForEmp=new Set();
+    for(const r of contact_results_db){
+      if(normEmpName(r.updated_by)!==w)continue;
+      crCanonForEmp.add(canonSid(r.shipment_id));
+    }
+  }
 
   // Rebuild employee dropdown (always, so new employees appear)
   const empSel=document.getElementById('sf-femp');
@@ -4105,19 +4110,18 @@ function renderStaffShipments(){
 
   // Merge both sources — API first, then Supabase
   let list=[...apiList,...sbList];
-  const sidSeen=new Set(list.map(r=>canonicalStaffRowSid(r._sid)));
+  const sidSeen=new Set(list.map(r=>canonSid(r._sid)));
 
   // ── Add contact_results rows for this employee not in current API/DB lists
-  // (طرود اختفت من جلب API لكن لها سجل متابعة — كانت تسبب فرق العدد 77 vs 154)
   if(fEmp){
     const want=normEmpName(fEmp);
     contact_results_db.forEach(cr=>{
       if(normEmpName(cr.updated_by)!==want)return;
       const sid=String(cr.shipment_id);
-      const canon=canonicalStaffRowSid(sid);
+      const canon=canonSid(sid);
       if(sidSeen.has(canon))return;
       sidSeen.add(canon);
-      const apiS=findApiShipmentForCrSid(sid);
+      const apiS=findApiFast(sid);
       if(apiS){
         const cr2=getCR(sid)||getCR(apiS.id);
         const emp=cr2.by||(assignments[apiS.tracking_code]||want);
@@ -4127,7 +4131,7 @@ function renderStaffShipments(){
           crResult:cr2.result||'',crNote:cr2.note||'',crBy:emp||want,src:'API'
         });
       } else {
-        const sbS=shipments.find(x=>String(x.id)===sid||String(x.id)===canon);
+        const sbS=shipById.get(sid)||shipById.get(canon);
         if(sbS){
           const cr2=getCR(sid)||getCR(sbS.id);
           list.push({
@@ -4154,7 +4158,7 @@ function renderStaffShipments(){
   else if(fRes){list=list.filter(s=>s.crResult===fRes);}
   if(fEmp){
     const w=normEmpName(fEmp);
-    list=list.filter(s=>normEmpName(s.crBy)===w||crUpdatedByMatches(s._sid,fEmp));
+    list=list.filter(s=>normEmpName(s.crBy)===w||(crCanonForEmp&&crCanonForEmp.has(canonSid(s._sid))));
   }
 
   const total=list.length;
