@@ -4199,7 +4199,7 @@ async function fetchFromAPI(){
     const stMap={'مع المندوب':'with_driver','في الشركة':'in_company','delivered':'delivered','مرتجع':'returned'};
     const seen=new Set();const mapped=[];
     for(const [i,r] of rawData.entries()){
-      const code=String(r.code||r.tracking_code||r.order_id||r.ParcelCode||r.id||('API-'+Date.now()+'-'+i)).trim();
+      const code=String(r.tracking_code||r.code||r.order_id||r.ParcelCode||r.id||('API-'+Date.now()+'-'+i)).trim();
       if(seen.has(code))continue;seen.add(code);
       mapped.push({tracking_code:code,customer_name:String(r.client_name||r.customer_name||r.name||'—').trim(),customer_phone:String(r.receiver_phone||r.customer_phone||r.phone||'—').trim(),status:stMap[r.status]||r.status||'with_driver',delay_days:parseInt(r[delayField]||r.delay_days||0)||0,upload_date:new Date().toISOString().split('T')[0]});
     }
@@ -5191,7 +5191,8 @@ async function fetchAPIShipments(){
     const seen=new Set();
     const baseUrl=url.replace(/[?&]delay_days=[^&]*/g,'').replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
     const sep=baseUrl.includes('?')?'&':'?';
-    const startUrl=`${baseUrl}${sep}delay_days=1`;
+    const MIN_API_DELAY_DAYS=2; // fetch parcels delayed for 2+ days
+    const startUrl=`${baseUrl}${sep}delay_days=${MIN_API_DELAY_DAYS}`;
 
     let nextCursor=null;
     let pageNum=0;
@@ -5211,7 +5212,7 @@ async function fetchAPIShipments(){
 
       let newCount=0;
       for(const item of pageData){
-        const code=String(item.code||item.tracking_code||item.order_id||item.ParcelCode||item.id||'').trim();
+        const code=String(item.tracking_code||item.code||item.order_id||item.ParcelCode||item.id||'').trim();
         if(code&&!seen.has(code)){seen.add(code);rawData.push(item);newCount++;}
       }
       console.log(`Page ${pageNum}: ${pageData.length} items, ${newCount} new, total: ${rawData.length}, next_cursor: ${nextCursor?'yes':'no'}`);
@@ -5250,7 +5251,14 @@ async function fetchAPIShipments(){
         skippedNonApi++;
         continue;
       }
-      const code=String(r.code||r.tracking_code||r.order_id||r.ParcelCode||r.id||('API-'+Date.now()+'-'+i)).trim();
+      const codeCandidates=[
+        r.tracking_code,
+        r.code,
+        r.order_id,
+        r.ParcelCode,
+        r.id,
+      ].map(v=>String(v??'').trim()).filter(Boolean);
+      const code=String(codeCandidates[0]||('API-'+Date.now()+'-'+i)).trim();
       if(seen2.has(code))continue;seen2.add(code);
 
       const days=parseInt(r.delay_days||r[delayField]||r['عدد الايام المتأخرة']||r['التأخير']||0)||0;
@@ -5273,6 +5281,7 @@ async function fetchAPIShipments(){
       apiShipments.push({
         id:'api_'+code,
         tracking_code:code,
+        code_pool:codeCandidates.join(' '),
         client_name:clientName,
         client_id:clientId,
         receiver_name:receiverName,
@@ -5432,8 +5441,26 @@ function renderAPIFetchLog(){
   `).join('');
 }
 
+function normalizeSearchToken(v){
+  return String(v??'')
+    // remove zero-width and direction marks that break matching visually
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g,'')
+    // normalize Arabic-Indic digits to latin digits
+    .replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    .replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    .toLowerCase()
+    .trim();
+}
+
+function normalizeCodeToken(v){
+  // Keep only letters and digits for robust code matching
+  return normalizeSearchToken(v).replace(/[^a-z0-9]/g,'');
+}
+
 function renderAPIShipments(){
-  const q=(document.getElementById('a-q')?.value||'').toLowerCase();
+  const qRaw=(document.getElementById('a-q')?.value||'');
+  const q=normalizeSearchToken(qRaw);
+  const qCode=normalizeCodeToken(qRaw);
   const fd=document.getElementById('a-fd')?.value||'';
   const fst=document.getElementById('a-fst')?.value||'';
   const fdays=document.getElementById('a-fdays')?.value||'';
@@ -5502,7 +5529,13 @@ function renderAPIShipments(){
       if(fdays==='31-60'&&(d<31||d>60))return false;
       if(fdays==='60+'&&d<61)return false;
     }
-    if(q&&!`${s.tracking_code} ${s.client_name} ${s.receiver_name} ${s.captain} ${s.customer_phone} ${s.current_branch} ${s.government} ${s.area}`.toLowerCase().includes(q))return false;
+    if(q){
+      const hay=normalizeSearchToken(`${s.tracking_code} ${s.client_name} ${s.receiver_name} ${s.captain} ${s.customer_phone} ${s.current_branch} ${s.government} ${s.area}`);
+      const codeHay=normalizeCodeToken(`${s.tracking_code||''} ${s.code_pool||''}`);
+      const qMatchesText=hay.includes(q);
+      const qMatchesCode=qCode!==''&&codeHay.includes(qCode);
+      if(!qMatchesText&&!qMatchesCode)return false;
+    }
     return true;
   }).sort((a,b)=>{
     const av=(()=>{
@@ -6397,6 +6430,7 @@ function loadCachedAPIShipments(){
       apiShipments.forEach(s=>{
         if(s.rep_commission===undefined)s.rep_commission=null;
         if(s.branch_commission===undefined)s.branch_commission=null;
+        if(s.code_pool===undefined)s.code_pool=String(s.tracking_code||s.id||'');
       });
       enrichAPICaptainPhones();
       document.getElementById('tb-api').textContent=apiShipments.length;
