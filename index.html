@@ -3449,7 +3449,10 @@ function getTransferTripDayKey(row){
   const raw=String(
     row.transfer_date||row.trip_date||row.moved_at||row.date||row.order_date||row.created_at||''
   ).trim();
-  if(!raw)return 'غير محدد';
+  if(!raw){
+    const d=Number(row.delay_days||0);
+    return Number.isFinite(d)&&d>0?`delay-day-${d}`:'غير محدد';
+  }
   const m=raw.match(/^(\d{4}-\d{2}-\d{2})/);
   if(m)return m[1];
   const d=new Date(raw);
@@ -3468,7 +3471,7 @@ function getBFSenderBranch(row){
 }
 function getBFReceiverBranch(row){
   return String(
-    row.received_branch||row.to_branch||row.toBranch||row.receiver_branch||row.destination_branch||row.branch_to||''
+    row.current_branch||row.currentBranch||row.received_branch||row.to_branch||row.toBranch||row.receiver_branch||row.destination_branch||row.branch_to||''
   ).trim();
 }
 function getBFCompanyBranch(row){
@@ -3626,11 +3629,13 @@ function renderTransfers(){
     const minDelay=delays.length?Math.min(...delays):0;
     const maxDelay=g.items.reduce((m,x)=>Math.max(m,Number(x.delay_days||0)),0);
     const delayBadge=minDelay===maxDelay?dBadge(maxDelay,'delayed'):`<span class="badge b-gold">${minDelay}-${maxDelay} يوم</span>`;
+    const dayLabel=String(g.day||'');
+    const displayDay=dayLabel.startsWith('delay-day-')?`تأخير ${dayLabel.replace('delay-day-','')} يوم`:dayLabel;
     rows.push(`<tr style="cursor:pointer" onclick="toggleBranchFollowupTrip('${keyEnc}')">
       <td><strong>${opened?'▼':'▶'} رحلة ${idx+1}</strong></td>
       <td>${g.fromBranch}</td>
       <td>${g.toBranch}</td>
-      <td><span class="badge b-blu">${g.day}</span></td>
+      <td><span class="badge b-blu">${displayDay}</span></td>
       <td>${delayBadge}</td>
       <td><span class="badge b-gold">${g.items.length} طلبية</span></td>
     </tr>`);
