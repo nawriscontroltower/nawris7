@@ -2857,15 +2857,22 @@ function gf(...keys){return r=>{for(const k of keys){const v=r[k];if(v!==undefin
 // SYNC STATE
 // ══════════════════════════════════════════
 function setSyncState(st,msg){
+  // While a global fetch is running, prevent unrelated calls from forcing "connected".
+  if(st==='ok'&&activeGlobalFetchOps>0){
+    st='busy';
+    msg=globalFetchStatusLabel||'جار الجلب...';
+  }
   const d=document.getElementById('sync-dot');
   d.className='sync-dot'+(st==='err'?' err':st==='busy'?' busy':'');
   document.getElementById('sync-txt').textContent=msg;
 }
 let activeGlobalFetchOps=0;
+let globalFetchStatusLabel='جار الجلب...';
 function setGlobalFetchState(isBusy,label='جار الجلب...'){
   if(isBusy){
+    globalFetchStatusLabel=label||'جار الجلب...';
     activeGlobalFetchOps++;
-    setSyncState('busy',label);
+    setSyncState('busy',globalFetchStatusLabel);
     return;
   }
   activeGlobalFetchOps=Math.max(0,activeGlobalFetchOps-1);
