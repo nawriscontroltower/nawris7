@@ -4456,32 +4456,39 @@ function mapCouriersFromApiPayload(payload){
     return '';
   };
   for(const row of candidates){
+    const idRaw=pick(row,['id','driver_id','courier_id','employee_id','captain_id','user_id','uuid','code','courier_code']);
+    const idText=String(idRaw||'').trim();
     const name=String(
       pick(row,[
         'name','full_name','driver_name','courier_name','employee_name','captain','ar_name','en_name',
-        'driver.name','driver.full_name','captain_info.name','employee.name','user.name','اسم المندوب'
+        'driver.name','driver.full_name','captain_info.name','employee.name','user.name',
+        'profile.name','courier.name','captain.name','اسم المندوب'
       ])||''
     ).trim();
-    if(!name)continue;
     const phoneRaw=String(
       pick(row,[
         'phone','mobile','phone_number','driver_phone','courier_phone','primary_phone','whatsapp','msisdn',
-        'contact.phone','driver.phone','driver.mobile','captain_info.phone','employee.phone','هاتف المندوب'
+        'contact.phone','driver.phone','driver.mobile','captain_info.phone','employee.phone',
+        'profile.phone','courier.phone','captain.phone','هاتف المندوب'
       ])||''
     ).trim();
     const phone2Raw=String(
       pick(row,['phone2','secondary_phone','alt_phone','backup_phone','contact.phone2','driver.phone2'])||''
     ).trim();
-    const key=[normalizePersonName(name),normPhone(phoneRaw)||phoneRaw].join('::');
+    const normMainPhone=normPhone(phoneRaw)||phoneRaw;
+    const key=idText
+      ? `id::${idText}`
+      : `np::${normalizePersonName(name||'')||'noname'}::${normMainPhone||'nophone'}`;
     if(seen.has(key))continue;
     seen.add(key);
+    const displayName=name||`مندوب ${idText||mapped.length+1}`;
     mapped.push({
-      id:pick(row,['id','driver_id','courier_id','employee_id','captain_id','user_id'])||null,
-      name,
-      phone:normPhone(phoneRaw)||phoneRaw,
+      id:idText||null,
+      name:displayName,
+      phone:normMainPhone,
       phone2:normPhone(phone2Raw)||phone2Raw||null,
-      vehicle_type:String(pick(row,['vehicle_type','vehicle','transport_type','vehicle.name','car_type'])||'').trim()||null,
-      branch:String(pick(row,['branch','branch_name','current_branch','received_branch','location.branch','branch_info.name','الفرع'])||'').trim()||null,
+      vehicle_type:String(pick(row,['vehicle_type','vehicle','transport_type','vehicle.name','car_type','vehicle_type_name'])||'').trim()||null,
+      branch:String(pick(row,['branch','branch_name','current_branch','received_branch','location.branch','branch_info.name','branch.title','branch.label','الفرع'])||'').trim()||null,
       source:'couriers_api'
     });
   }
@@ -4493,7 +4500,9 @@ function extractCouriersCandidates(payload){
   if(!payload||typeof payload!=='object')return [];
   const buckets=[
     payload.couriers,payload.drivers,payload.captains,payload.employees,payload.results,payload.items,payload.data,
-    payload?.data?.items,payload?.data?.drivers,payload?.data?.captains,payload?.data?.employees,payload?.data?.data
+    payload?.payload,payload?.list,payload?.rows,
+    payload?.data?.items,payload?.data?.drivers,payload?.data?.captains,payload?.data?.employees,payload?.data?.data,
+    payload?.data?.list,payload?.data?.rows,payload?.result?.data,payload?.result?.items
   ];
   for(const b of buckets){if(Array.isArray(b))return b;}
   return [];
@@ -4555,7 +4564,6 @@ async function fetchCouriersFromAPI(){
     const maxPages=200;
     let pageNum=1;
     const allRows=[];
-    const dedup=new Set();
     while(page<maxPages){
       page++;
       el.textContent=`⏳ جارٍ جلب المناديب... صفحة ${page}`;
@@ -4567,12 +4575,7 @@ async function fetchCouriersFromAPI(){
       }
       const payload=await res.json();
       const chunk=extractCouriersCandidates(payload);
-      for(const row of chunk){
-        const key=JSON.stringify([row?.id||row?.driver_id||row?.courier_id||'',row?.name||row?.full_name||row?.driver_name||'',row?.phone||row?.mobile||'']);
-        if(dedup.has(key))continue;
-        dedup.add(key);
-        allRows.push(row);
-      }
+      for(const row of chunk)allRows.push(row);
       const nextCursor=payload?.meta?.next_cursor||payload?.next_cursor||payload?.pagination?.next_cursor||null;
       const currentPage=Number(payload?.meta?.current_page||payload?.current_page||payload?.pagination?.current_page||pageNum||0);
       const lastPage=Number(payload?.meta?.last_page||payload?.last_page||payload?.pagination?.last_page||payload?.meta?.total_pages||payload?.total_pages||payload?.pagination?.total_pages||0);
