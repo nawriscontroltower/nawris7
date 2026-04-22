@@ -697,8 +697,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       <div class="sb-section">القائمة الرئيسية</div>
       <div class="sb-item on" data-tab="home"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> الرئيسية</div>
       <div class="sb-item" data-tab="drivers"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span> المناديب</div>
-      <div class="sb-item" data-tab="returns"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg></span> المرتجعات</div>
-      <div class="sb-item" data-tab="transfers"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> التحويلات</div>
+      <div class="sb-item" data-tab="branch-followup"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span> متابعة الفروع</div>
       <div class="sb-item" data-tab="shipments"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> الطرود <span class="tbadge" id="tb-api" style="background:var(--pur)">0</span></div>
       <div class="sb-item" data-tab="janzour"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> متابعة جنزور <span class="tbadge" id="tb-janzour" style="background:var(--grn)">0</span></div>
       <div class="sb-item" data-tab="janzour-rates"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></span> نسب ومعدلات جنزور</div>
@@ -993,55 +992,61 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
     </div>
   </div>
 
-  <!-- ══ RETURNS ══ -->
-  <div class="page" id="tab-returns">
+  <!-- ══ BRANCH FOLLOW-UP (RETURNS + TRANSFERS) ══ -->
+  <div class="page" id="tab-branch-followup">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-      <div style="font-size:18px;font-weight:800">↩️ المرتجعات</div>
-      <button class="btn btn-ghost btn-sm" onclick="loadReturns()">↻ تحديث</button>
+      <div style="font-size:18px;font-weight:800">🧭 متابعة الفروع</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="loadReturns();loadTransfers()">↻ تحديث</button>
+      </div>
     </div>
-    <div class="fbar">
-      <select class="fi" id="r-loc" onchange="renderReturns()" id="r-loc-sel">
-        <option value="">كل المواقع</option>
-        <option value="with_driver">مع المندوب</option>
-        <option value="in_warehouse">في المخزن</option>
-        <option value="returned_to_store">تم التسليم للمتجر</option>
-      </select>
-      <select class="fi" id="r-rsn" onchange="renderReturns()">
-        <option value="">كل الأسباب</option>
-        <option value="customer_refused">رفض العميل</option>
-        <option value="wrong_address">عنوان خاطئ</option>
-        <option value="no_answer">لا يرد</option>
-        <option value="damaged">تالف</option>
-        <option value="other">أخرى</option>
+    <div class="fbar" style="margin-bottom:12px">
+      <select class="fi" id="bf-mode" onchange="setBranchFollowupTab(this.value)" style="min-width:200px">
+        <option value="company">🏢 في الشركة</option>
+        <option value="transfers">🔄 التحويلات</option>
       </select>
     </div>
-    <div class="tw">
-      <table>
-        <thead><tr><th>كود الطرد</th><th>العميل</th><th>المندوب</th><th>السبب</th><th>الموقع</th><th>التاريخ</th><th>إجراء</th></tr></thead>
-        <tbody id="r-tbody"><tr><td colspan="7" style="text-align:center;padding:36px;color:var(--mute)">لا مرتجعات</td></tr></tbody>
-      </table>
-    </div>
-  </div>
 
-  <!-- ══ TRANSFERS ══ -->
-  <div class="page" id="tab-transfers">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-      <div style="font-size:18px;font-weight:800">🔄 التحويلات</div>
-      <button class="btn btn-ghost btn-sm" onclick="loadTransfers()">↻ تحديث</button>
+    <div id="bf-company-pane">
+      <div class="fbar">
+        <select class="fi" id="r-loc" onchange="renderReturns()" id="r-loc-sel">
+          <option value="">كل المواقع</option>
+          <option value="with_driver">مع المندوب</option>
+          <option value="in_warehouse">في المخزن</option>
+          <option value="returned_to_store">تم التسليم للمتجر</option>
+        </select>
+        <select class="fi" id="r-rsn" onchange="renderReturns()">
+          <option value="">كل الأسباب</option>
+          <option value="customer_refused">رفض العميل</option>
+          <option value="wrong_address">عنوان خاطئ</option>
+          <option value="no_answer">لا يرد</option>
+          <option value="damaged">تالف</option>
+          <option value="other">أخرى</option>
+        </select>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>كود الطرد</th><th>المتجر / العميل</th><th>المندوب</th><th>الحالة</th><th>الفرع المستلم</th><th>التأخير</th><th>المصدر</th></tr></thead>
+          <tbody id="r-tbody"><tr><td colspan="7" style="text-align:center;padding:36px;color:var(--mute)">لا مرتجعات</td></tr></tbody>
+        </table>
+      </div>
     </div>
-    <div class="fbar">
-      <select class="fi" id="t-st" onchange="renderTransfers()">
-        <option value="">كل الحالات</option>
-        <option value="pending">معلقة</option>
-        <option value="accepted">مقبولة</option>
-        <option value="rejected">مرفوضة</option>
-      </select>
-    </div>
-    <div class="tw">
-      <table>
-        <thead><tr><th>كود الطرد</th><th>من فرع</th><th>إلى فرع</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th></tr></thead>
-        <tbody id="t-tbody"><tr><td colspan="6" style="text-align:center;padding:36px;color:var(--mute)">لا تحويلات</td></tr></tbody>
-      </table>
+
+    <div id="bf-transfers-pane" style="display:none">
+      <div class="fbar">
+        <select class="fi" id="t-st" onchange="renderTransfers()">
+          <option value="">كل الحالات</option>
+          <option value="pending">معلقة</option>
+          <option value="accepted">مقبولة</option>
+          <option value="rejected">مرفوضة</option>
+        </select>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>كود الطرد</th><th>من فرع</th><th>إلى فرع</th><th>الحالة</th><th>التأخير</th><th>المصدر</th></tr></thead>
+          <tbody id="t-tbody"><tr><td colspan="6" style="text-align:center;padding:36px;color:var(--mute)">لا تحويلات</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -1050,7 +1055,6 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div style="font-size:18px;font-weight:800">📦 الطرود <span class="badge b-pur" style="font-size:11px">جلب تلقائي من النظام</span></div>
       <div style="display:flex;gap:7px;flex-wrap:wrap">
-        <button class="btn btn-pur btn-sm" onclick="fetchAPIShipments()">⬇️ جلب الآن</button>
         <button class="btn btn-ghost btn-sm" onclick="renderAPIShipments()">↻ تحديث العرض</button>
         <button class="btn btn-wa btn-sm" onclick="bulkWA_API()">💬 واتساب للمحددين</button>
         <button class="btn btn-gold btn-sm manager-only" onclick="openAssignPanel()">👥 توزيع الطرود</button>
@@ -1113,7 +1117,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
           <input class="fi" id="api-url2" placeholder="رابط API..." dir="ltr" style="min-width:200px;font-size:11px">
           <input class="fi" id="api-token2" type="password" placeholder="Token..." dir="ltr" style="min-width:140px;font-size:11px">
           <select class="fi" id="api-interval2" style="font-size:11px;min-width:auto">
-            <option value="0">يدوي</option>
+            <option value="0">إيقاف</option>
             <option value="1">كل ساعة</option>
             <option value="3">كل 3 ساعات</option>
             <option value="6">كل 6 ساعات</option>
@@ -1134,27 +1138,25 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       <div class="kcard orn"><div class="klbl">في الشركة</div><div class="kval" id="ak-comp">0</div></div>
     </div>
 
-    <!-- Segments -->
-    <div class="segs">
-      <div class="seg on" data-aseg="all">الكل <span class="seg-n" id="asn-all">0</span></div>
-      <div class="seg" data-aseg="mine">👤 مسنداتي <span class="seg-n" id="asn-mine">0</span></div>
-      <div class="seg" data-aseg="driver">🚗 مع المندوب <span class="seg-n" id="asn-driver">0</span></div>
-      <div class="seg" data-aseg="company">🏢 في الشركة <span class="seg-n" id="asn-comp">0</span></div>
-      <div class="seg" data-aseg="late">🔴 متأخرة <span class="seg-n" id="asn-late">0</span></div>
-      <div class="seg manager-only" data-aseg="unassigned">⚠️ غير مسندة <span class="seg-n" id="asn-unassigned">0</span></div>
-    </div>
-
     <!-- Filters -->
     <div class="fbar">
       <input class="fi fi-grow" id="a-q" type="text" placeholder="🔍 بحث بالكود، المتجر، المستلم، المندوب، الفرع..." oninput="renderAPIShipments()">
       <button class="btn btn-ghost btn-sm" onclick="resetAPIFilters()" title="مسح الفلاتر">✕ مسح</button>
     </div>
     <div class="fbar" style="flex-wrap:wrap">
-      <select class="fi" id="a-fd" onchange="renderAPIShipments()" style="min-width:120px">
-        <option value="">كل التأخير</option>
-        <option value="critical">🔴 +15 يوم</option>
-        <option value="warning">🟡 7-15 يوم</option>
-        <option value="ok">🟢 في الموعد</option>
+      <select class="fi" id="a-view-mode" onchange="setAPISeg(this.value)" style="min-width:170px">
+        <option value="all">عرض: الكل</option>
+        <option value="mine">عرض: مسنداتي</option>
+        <option value="driver">عرض: مع المندوب</option>
+        <option value="returned">عرض: مرتجع</option>
+        <option value="company">عرض: في الشركة</option>
+        <option value="late">عرض: متأخرة</option>
+        <option value="unassigned">عرض: غير مسندة</option>
+      </select>
+      <select class="fi" id="a-main-type" onchange="renderAPIShipments()" style="min-width:140px">
+        <option value="">نوع القائمة</option>
+        <option value="with_driver">مع المندوب</option>
+        <option value="returned">مرتجع</option>
       </select>
       <select class="fi" id="a-fst" onchange="renderAPIShipments()" style="min-width:120px">
         <option value="">كل الحالات</option>
@@ -1164,19 +1166,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <option value="returned">مرتجع</option>
         <option value="delivered">مُسلَّم</option>
       </select>
-      <select class="fi manager-only" id="a-femp" onchange="renderAPIShipments()" style="min-width:140px"><option value="">كل الموظفين</option></select>
-      <select class="fi" id="a-fcap" onchange="renderAPIShipments()" style="min-width:120px"><option value="">كل المناديب</option></select>
       <select class="fi" id="a-fbr" onchange="renderAPIShipments()" style="min-width:120px"><option value="">كل الفروع</option></select>
-      <select class="fi" id="a-fgov" onchange="renderAPIShipments()" style="min-width:120px"><option value="">كل المحافظات</option></select>
-      <select class="fi" id="a-fdays" onchange="renderAPIShipments()" style="min-width:130px">
-        <option value="">أيام التأخير</option>
-        <option value="0-5">0-5 أيام</option>
-        <option value="6-10">6-10 أيام</option>
-        <option value="11-15">11-15 يوم</option>
-        <option value="16-30">16-30 يوم</option>
-        <option value="31-60">31-60 يوم</option>
-        <option value="60+">+60 يوم</option>
-      </select>
     </div>
 
     <!-- Table -->
@@ -1197,7 +1187,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
             <th onclick="setAPISort('status')" style="cursor:pointer;user-select:none">الحالة <span id="a-sort-status">↕</span></th><th onclick="setAPISort('delay_days')" style="cursor:pointer;user-select:none">التأخير <span id="a-sort-delay_days">↓</span></th><th class="mob-hide" onclick="setAPISort('cr_result')" style="cursor:pointer;user-select:none">نتيجة التواصل <span id="a-sort-cr_result">↕</span></th><th class="mob-hide" onclick="setAPISort('cr_note')" style="cursor:pointer;user-select:none">ملاحظة <span id="a-sort-cr_note">↕</span></th>
             <th>واتساب</th><th class="mob-hide">حفظ</th><th class="mob-hide">نقل</th>
           </tr></thead>
-          <tbody id="a-tbody"><tr><td colspan="18" style="text-align:center;padding:36px;color:var(--mute)">🔗 اضغط "جلب الآن" أو أعد إعدادات API من تبويب "رفع البيانات"</td></tr></tbody>
+          <tbody id="a-tbody"><tr><td colspan="18" style="text-align:center;padding:36px;color:var(--mute)">🔗 الجلب تلقائي — أعد إعدادات API من تبويب "رفع البيانات" عند الحاجة</td></tr></tbody>
         </table>
       </div>
       <div style="padding:10px 16px;border-top:1px solid var(--rim);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1323,7 +1313,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
           <th title="تسجيل تسليم + تم الحل + مزامنة المؤشرات">تم التسليم</th><th>حفظ</th>
           <th>واتساب</th>
         </tr></thead>
-        <tbody id="j-tbody"><tr><td colspan="15" style="text-align:center;padding:32px;color:var(--mute)">اضغط "جلب الآن" في طرود API لتحميل البيانات</td></tr></tbody>
+        <tbody id="j-tbody"><tr><td colspan="15" style="text-align:center;padding:32px;color:var(--mute)">سيتم تحميل بيانات API تلقائياً بعد الاتصال</td></tr></tbody>
       </table>
     </div>
     <div style="padding:10px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1428,10 +1418,19 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       <label class="fl">عرض بيانات موظف</label>
       <select class="fi" id="skpi-emp" style="max-width:320px" onchange="renderServiceKpiPage()"><option value="">— أنا —</option></select>
     </div>
+    <div class="card" style="padding:12px;margin-bottom:14px">
+      <label class="fl">الفترة</label>
+      <select class="fi" id="skpi-period" style="max-width:220px" onchange="renderServiceKpiPage()">
+        <option value="day">يومي</option>
+        <option value="week">أسبوعي</option>
+        <option value="month" selected>شهري</option>
+      </select>
+    </div>
     <div class="kgrid" style="margin-bottom:16px">
       <div class="kcard blu"><div class="klbl">إجمالي الطرود المعالجة</div><div class="kval" id="skpi-total">0</div></div>
       <div class="kcard grn"><div class="klbl">معدل نجاح التسليم %</div><div class="kval" id="skpi-rate">0</div></div>
       <div class="kcard pur"><div class="klbl">إجمالي العمولات المحسوبة</div><div class="kval" id="skpi-earn">0</div></div>
+      <div class="kcard gold"><div class="klbl">متوسط سرعة المعالجة (دقيقة)</div><div class="kval" id="skpi-speed">0</div></div>
     </div>
     <div class="card" style="padding:14px;margin-bottom:12px">
       <div class="ctitle" style="margin-bottom:8px">تسليم / مرتجع / أخرى</div>
@@ -1675,11 +1674,10 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <button class="btn btn-ghost" onclick="testAPI()">🔌 اختبار الاتصال</button>
-          <button class="btn btn-pur" onclick="fetchFromAPI()">⬇️ جلب الطرود الآن</button>
           <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
             <label style="font-size:11px;color:var(--pale);white-space:nowrap">جلب كل</label>
             <select class="fi" style="flex:1" id="api-interval">
-              <option value="0">يدوي</option>
+              <option value="0">إيقاف</option>
               <option value="1">ساعة</option>
               <option value="3">3 ساعات</option>
               <option value="6">6 ساعات</option>
@@ -1871,6 +1869,11 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
           <option value="inactive">معطّل</option>
         </select>
       </div>
+      <div class="fg">
+        <label class="fl">صلاحيات الفروع (received-branch) — اختياري</label>
+        <input class="fi" style="width:100%" id="um-branches" placeholder="مثال: الفرع المعري, بنغازي المركز" dir="rtl">
+        <div style="font-size:11px;color:var(--mute);margin-top:4px">عند تعبئة هذا الحقل، لن يرى الموظف إلا الطرود التابعة لهذه الفروع ولن يمكن إسناد طرود خارجها إليه.</div>
+      </div>
       <div class="fg" id="um-perms-section">
         <label class="fl">الصلاحيات — الصفحات المسموحة</label>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin-top:6px" id="um-perms-grid">
@@ -1881,10 +1884,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
             <input type="checkbox" class="um-perm" value="drivers"> 👤 المناديب
           </label>
           <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--bg4);border:1px solid var(--rim);border-radius:var(--r3);font-size:12px;cursor:pointer">
-            <input type="checkbox" class="um-perm" value="returns"> ↩️ المرتجعات
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--bg4);border:1px solid var(--rim);border-radius:var(--r3);font-size:12px;cursor:pointer">
-            <input type="checkbox" class="um-perm" value="transfers"> 🔄 التحويلات
+            <input type="checkbox" class="um-perm" value="branch-followup"> 🧭 متابعة الفروع
           </label>
           <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--bg4);border:1px solid var(--rim);border-radius:var(--r3);font-size:12px;cursor:pointer">
             <input type="checkbox" class="um-perm" value="shipments"> 📦 الطرود
@@ -2020,8 +2020,7 @@ const MANUAL_EXCEL_SHIPMENTS_ONLY = true; // keep main shipments table sourced o
 const ALL_TABS = [
   {id:'home',label:'🏠 الرئيسية',always:true},
   {id:'drivers',label:'👤 المناديب'},
-  {id:'returns',label:'↩️ المرتجعات'},
-  {id:'transfers',label:'🔄 التحويلات'},
+  {id:'branch-followup',label:'🧭 متابعة الفروع'},
   {id:'shipments',label:'📦 الطرود'},
   {id:'janzour',label:'🟢 متابعة جنزور'},
   {id:'janzour-rates',label:'📊 نسب ومعدلات جنزور'},
@@ -2038,9 +2037,9 @@ const MANAGER_TABS = ALL_TAB_IDS; // managers get all
 
 // Default users (seed)
 const DEFAULT_USERS = {
-  'mohamed': {pass:'admin123',role:'manager',name:'محمد سعد',phone:'',email:'',status:'active',perms:ALL_TAB_IDS},
-  'ahmed':   {pass:'emp123',role:'employee',name:'أحمد علي',phone:'',email:'',status:'active',perms:['home','shipments','janzour','janzour-rates','service-kpi']},
-  'fatima':  {pass:'emp123',role:'employee',name:'فاطمة محمد',phone:'',email:'',status:'active',perms:['home','shipments','janzour','janzour-rates','service-kpi']},
+  'mohamed': {pass:'admin123',role:'manager',name:'محمد سعد',phone:'',email:'',status:'active',perms:ALL_TAB_IDS,allowed_branches:[]},
+  'ahmed':   {pass:'emp123',role:'employee',name:'أحمد علي',phone:'',email:'',status:'active',perms:['home','shipments','janzour','janzour-rates','service-kpi'],allowed_branches:[]},
+  'fatima':  {pass:'emp123',role:'employee',name:'فاطمة محمد',phone:'',email:'',status:'active',perms:['home','shipments','janzour','janzour-rates','service-kpi'],allowed_branches:[]},
 };
 
 // Load users from localStorage, falling back to defaults
@@ -2054,11 +2053,17 @@ function loadUsers(){
       Object.keys(parsed).forEach(k=>{
         if(!parsed[k].perms) parsed[k].perms=parsed[k].role==='manager'?ALL_TAB_IDS:['home','shipments'];
         if(!parsed[k].status) parsed[k].status='active';
-        const p=parsed[k].perms;
-        if(Array.isArray(p)&&p.includes('janzour')&&!p.includes('janzour-rates')){
+        if(!Array.isArray(parsed[k].allowed_branches)) parsed[k].allowed_branches=[];
+        const p=Array.isArray(parsed[k].perms)?[...parsed[k].perms]:[];
+        if((p.includes('returns')||p.includes('transfers'))&&!p.includes('branch-followup')){
+          p.push('branch-followup');
+          migrated=true;
+        }
+        if(p.includes('janzour')&&!p.includes('janzour-rates')){
           p.push('janzour-rates');
           migrated=true;
         }
+        parsed[k].perms=p.filter(x=>x!=='returns'&&x!=='transfers');
       });
       if(migrated) saveUsers(parsed);
       return parsed;
@@ -2081,6 +2086,7 @@ let PER=25;
 let sSortKey='delay_days';
 let sSortDir='desc';
 let autoFetchTimer=null;
+let apiReturnsShipments=[], apiCaptainsCache=[];
 let staffLogState={packageId:'',trackingCode:'',storeName:'',all:[],shown:5};
 let CFG={critDays:3,warnDays:2,discount:50,company:'النورس للشحن',mgrPhone:''};
 let WA_TPLS=[
@@ -2322,7 +2328,7 @@ function applyRole(){
   // Re-read from USERS so any manager edits are reflected without full logout/login
   if(CU&&USERS[CU.username]){
     const fresh=USERS[CU.username];
-    CU.role=fresh.role;CU.perms=fresh.perms;CU.status=fresh.status;CU.name=fresh.name;
+    CU.role=fresh.role;CU.perms=fresh.perms;CU.status=fresh.status;CU.name=fresh.name;CU.allowed_branches=fresh.allowed_branches||[];
     sessionStorage.setItem('nu',JSON.stringify(CU));
   }
   const mgr=CU.role==='manager';
@@ -2445,9 +2451,14 @@ async function loadTransfers(){
 // ══════════════════════════════════════════
 // CLASSIFY & BADGES
 // ══════════════════════════════════════════
-function cls(d){return d>CFG.critDays?'critical':d>CFG.warnDays?'warning':'ok';}
-function dBadge(d){
-  const c=cls(d);
+function cls(d,status=''){
+  const st=String(status||'').trim().toLowerCase();
+  const tracked=st===''||st==='with_driver'||st==='in_company'||st==='delayed';
+  if(!tracked)return 'ok';
+  return d>CFG.critDays?'critical':d>CFG.warnDays?'warning':'ok';
+}
+function dBadge(d,status=''){
+  const c=cls(d,status);
   return c==='critical'?`<span class="dp-c">🔴 ${d}ي</span>`:
          c==='warning'? `<span class="dp-w">🟡 ${d}ي</span>`:
                         `<span class="dp-o">🟢 ${d}ي</span>`;
@@ -2463,6 +2474,38 @@ function stBadge(s){
 }
 function ctBadge(id){return contacted.has(String(id))?'<span class="badge b-grn">✅ تم</span>':'<span class="badge b-dim">⏳</span>';}
 function normPhone(p){if(!p)return'';p=String(p).replace(/[^0-9]/g,'');if(p.startsWith('0')&&p.length===10)p='218'+p.slice(1);return p;}
+function normalizeBranchKey(v){return String(v||'').trim().toLowerCase();}
+function isReturnTrackingCode(code){
+  const c=String(code||'').trim().toUpperCase();
+  if(!c)return false;
+  return c.includes('R');
+}
+function getAllowedBranchesForUser(user){
+  if(!user||user.role==='manager')return [];
+  const arr=Array.isArray(user.allowed_branches)?user.allowed_branches:[];
+  return arr.map(normalizeBranchKey).filter(Boolean);
+}
+function userCanAccessBranch(user,branchName){
+  const allowed=getAllowedBranchesForUser(user);
+  if(!allowed.length)return true;
+  return allowed.includes(normalizeBranchKey(branchName));
+}
+function getUserByEmployeeName(name){
+  const n=String(name||'').trim();
+  if(!n)return null;
+  const key=Object.keys(USERS).find(k=>String(USERS[k]?.name||'').trim()===n);
+  return key?{username:key,...USERS[key]}:null;
+}
+function canAssignShipmentToEmployee(shipment,employeeName){
+  const user=getUserByEmployeeName(employeeName);
+  if(!user)return true;
+  return userCanAccessBranch(user, shipment?.current_branch||'');
+}
+function getVisibleSelectedApiShipments(){
+  const ids=[...document.querySelectorAll('#a-tbody input[type="checkbox"][data-asid]:checked')].map(cb=>String(cb.dataset.asid||''));
+  if(!ids.length)return [];
+  return ids.map(id=>apiShipments.find(x=>String(x.id)===id)).filter(Boolean);
+}
 
 // Contact Result helpers — Supabase first, localStorage fallback
 function getCR(sid){
@@ -2804,9 +2847,9 @@ function refreshAll(){updateKPIs();renderHome();renderDrivers();renderWA();}
 
 function updateKPIs(){
   // Main KPIs now rely on API shipments only.
-  const crit=apiShipments.filter(s=>cls(s.delay_days)==='critical').length;
-  const warn=apiShipments.filter(s=>cls(s.delay_days)==='warning').length;
-  const ok=apiShipments.filter(s=>cls(s.delay_days)==='ok').length;
+  const crit=apiShipments.filter(s=>cls(s.delay_days,s.status)==='critical').length;
+  const warn=apiShipments.filter(s=>cls(s.delay_days,s.status)==='warning').length;
+  const ok=apiShipments.filter(s=>cls(s.delay_days,s.status)==='ok').length;
   const comp=apiShipments.filter(s=>s.status==='in_company').length;
   const ret=apiShipments.filter(s=>s.status==='returned').length;
   document.getElementById('k-total').textContent=apiShipments.length;
@@ -3283,7 +3326,8 @@ function renderDrivers(){
     if(!stats[n])stats[n]={name:n,phone:s.driver_phone||'',region:s.region_name||'',branch:s.branch_name||'',total:0,crit:0,warn:0,ok:0,maxD:0};
     const st=stats[n];st.total++;const c=cls(s.delay_days);st[c]++;if(s.delay_days>st.maxD)st.maxD=s.delay_days;
   });
-  drivers_db.forEach(d=>{if(!stats[d.name])stats[d.name]={name:d.name,phone:d.phone||'',region:'',branch:'',total:0,crit:0,warn:0,ok:0,maxD:0};if(!stats[d.name].phone)stats[d.name].phone=d.phone||'';});
+  const dynamicDrivers=[...drivers_db,...(apiCaptainsCache||[]).map(c=>({name:c.name,phone:c.phone||'',branch:c.branch||'',region:''}))];
+  dynamicDrivers.forEach(d=>{if(!d?.name)return;if(!stats[d.name])stats[d.name]={name:d.name,phone:d.phone||'',region:d.region||'',branch:d.branch||'',total:0,crit:0,warn:0,ok:0,maxD:0};if(!stats[d.name].phone)stats[d.name].phone=d.phone||'';});
   let list=Object.values(stats).filter(d=>{
     if(q&&!`${d.name} ${d.region} ${d.branch}`.toLowerCase().includes(q))return false;
     return true;
@@ -3337,30 +3381,26 @@ function renderDrivers(){
 // ══════════════════════════════════════════
 function getReturnLocs(){return getAllReturnStatuses().map(s=>s.key);}
 function renderReturns(){
-  const loc=document.getElementById('r-loc')?.value||'';
-  const rsn=document.getElementById('r-rsn')?.value||'';
-  const allowed=getReturnLocs();
-  // Build locMap from return statuses (default + custom)
-  const customRS=getAllReturnStatuses();
-  const locMap={with_driver:'مع المندوب',in_warehouse:'في المخزن',returned_to_store:'تسليم للمتجر'};
-  customRS.forEach(s=>{const key=s.label.replace(/\s+/g,'_').toLowerCase();locMap[key]=s.label;});
-  const rsnMap={customer_refused:'رفض العميل',wrong_address:'عنوان خاطئ',no_answer:'لا يرد',damaged:'تالف',other:'أخرى'};
-  let list=returns_data.filter(r=>{
-    if(!allowed.includes(r.location))return false;
-    if(loc&&r.location!==loc)return false;
-    if(rsn&&r.reason!==rsn)return false;
+  // Branch follow-up / "in company": API rows delayed > 1 day.
+  const list=(apiShipments||[]).filter(s=>{
+    const raw=String(s.raw_status||'').trim();
+    const inCompany=s.status==='in_company'||raw.includes('في الشركة');
+    if(!inCompany)return false;
+    if(Number(s.delay_days||0)<2)return false;
+    const scopeBranch=String(s.received_branch||s.current_branch||'').trim();
+    if(scopeBranch&&!userCanAccessBranch(CU,scopeBranch))return false;
     return true;
   });
   const tbody=document.getElementById('r-tbody');
-  if(!list.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--mute)">لا مرتجعات</td></tr>';return;}
-  tbody.innerHTML=list.map(r=>`<tr>
-    <td class="code-cell">${backofficeOrderLinkHtml(r.shipments?.tracking_code||'—')}</td>
-    <td>${r.shipments?.customer_name||'—'}</td>
-    <td>${r.drivers?.name||'—'}</td>
-    <td><span class="badge b-orn">${rsnMap[r.reason]||r.reason||'—'}</span></td>
-    <td><span class="badge ${r.location==='returned_to_store'?'b-grn':r.location==='in_warehouse'?'b-gold':'b-red'}">${locMap[r.location]||r.location||'—'}</span></td>
-    <td style="font-size:11px;color:var(--mute)">${r.created_at?r.created_at.slice(0,10):'—'}</td>
-    <td><button class="btn btn-ghost btn-sm" onclick="updateRetLoc('${r.id}','${r.location}')">تحديث الموقع</button></td>
+  if(!list.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--mute)">لا توجد بيانات "في الشركة" (أكثر من يوم)</td></tr>';return;}
+  tbody.innerHTML=list.map(s=>`<tr>
+    <td class="code-cell">${backofficeOrderLinkHtml(s.tracking_code||'—')}</td>
+    <td>${s.client_name||s.receiver_name||'—'}</td>
+    <td>${s.captain||'—'}</td>
+    <td>${stBadge(s.status||s.raw_status)}</td>
+    <td>${s.received_branch||s.current_branch||'—'}</td>
+    <td>${dBadge(s.delay_days,s.status)}</td>
+    <td><span class="badge b-pur">API</span></td>
   </tr>`).join('');
 }
 function openRetModal(sid){
@@ -3392,19 +3432,26 @@ async function updateRetLoc(id,current){
 // ══════════════════════════════════════════
 function getTransferSts(){return getAllTransferStatuses().map(s=>s.key);}
 function renderTransfers(){
-  const st=document.getElementById('t-st')?.value||'';
-  const allowed=getTransferSts();
-  const stMap={pending:'معلقة',accepted:'مقبولة',rejected:'مرفوضة'};
-  let list=transfers_data.filter(t=>allowed.includes(t.status)&&(!st||t.status===st));
+  // Branch follow-up / "in transfer": API rows delayed > 2 days.
+  const list=(apiShipments||[]).filter(s=>{
+    const raw=String(s.raw_status||'').trim();
+    const inTransfer=s.status==='transferred'||raw.includes('بالطريق للفرع')||raw.includes('تحويل');
+    if(!inTransfer)return false;
+    if(Number(s.delay_days||0)<3)return false;
+    const b1=String(s.previous_branch||'').trim();
+    const b2=String(s.received_branch||s.current_branch||'').trim();
+    if(!userCanAccessBranch(CU,b1)&&!userCanAccessBranch(CU,b2))return false;
+    return true;
+  });
   const tbody=document.getElementById('t-tbody');
-  if(!list.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--mute)">لا تحويلات</td></tr>';return;}
-  tbody.innerHTML=list.map(t=>`<tr>
-    <td class="code-cell">${backofficeOrderLinkHtml(t.shipments?.tracking_code||'—')}</td>
-    <td>${t.from_branch?.name||'—'}</td>
-    <td>${t.to_branch?.name||'—'}</td>
-    <td><span class="badge ${t.status==='accepted'?'b-grn':t.status==='rejected'?'b-red':'b-gold'}">${stMap[t.status]||t.status}</span></td>
-    <td style="font-size:11px;color:var(--mute)">${t.created_at?t.created_at.slice(0,10):'—'}</td>
-    <td>${t.status==='pending'?`<div style="display:flex;gap:4px"><button class="btn btn-grn btn-sm" onclick="updateTransfer('${t.id}','accepted')">قبول</button><button class="btn btn-red btn-sm" onclick="updateTransfer('${t.id}','rejected')">رفض</button></div>`:'—'}</td>
+  if(!list.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--mute)">لا توجد بيانات "في تحويل" (أكثر من يومين)</td></tr>';return;}
+  tbody.innerHTML=list.map(s=>`<tr>
+    <td class="code-cell">${backofficeOrderLinkHtml(s.tracking_code||'—')}</td>
+    <td>${s.previous_branch||'—'}</td>
+    <td>${s.received_branch||s.current_branch||'—'}</td>
+    <td>${stBadge(s.status||s.raw_status)}</td>
+    <td>${dBadge(s.delay_days,s.status)}</td>
+    <td><span class="badge b-pur">API</span></td>
   </tr>`).join('');
 }
 async function updateTransfer(id,status){
@@ -4160,28 +4207,57 @@ async function fetchFromAPI(){
   if(!url){toast('أدخل رابط API أولاً','e');return;}
   el.textContent='⏳ جارٍ جلب البيانات...';
   try{
-    // Paginated fetch
-    let rawData=[],cursor='',pg=0;
-    while(pg<20){
-      pg++;
-      el.textContent=`⏳ صفحة ${pg}...`;
-      try{
-        const res=await apiFetch(url,token,cursor||'');
-        if(!res.ok){if(pg>1)break;throw new Error(`HTTP ${res.status}`);}
-        const json=await res.json();
-        const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
-        if(pageData.length)rawData=rawData.concat(pageData);
-        const nc=json?.meta?.next_cursor||json?.next_cursor||null;
-        if(!nc||!pageData.length)break;
-        cursor=nc;
-      }catch(pgErr){if(pg>1)break;throw pgErr;}
+    // Paginated fetch from day 2 to the last available delay day.
+    let rawData=[];
+    const seen=new Set();
+    const baseUrl=url.replace(/[?&]delay_days=[^&]*/g,'').replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
+    const sep=baseUrl.includes('?')?'&':'?';
+    const MIN_DELAY_DAYS=2;
+    const MAX_DELAY_SCAN_DAYS=2000; // safety cap
+    const EMPTY_DAYS_BREAK_STREAK=25; // stop when trailing days are empty
+    const MAX_PAGES_PER_DAY=100;
+    let totalPages=0;
+    let emptyDaysStreak=0;
+
+    for(let delayDay=MIN_DELAY_DAYS;delayDay<=MAX_DELAY_SCAN_DAYS;delayDay++){
+      let cursor='';
+      let dayAdded=0;
+      const dayUrl=`${baseUrl}${sep}delay_days=${delayDay}`;
+
+      for(let pg=1;pg<=MAX_PAGES_PER_DAY;pg++){
+        totalPages++;
+        el.textContent=`⏳ اليوم ${delayDay} - صفحة ${pg}...`;
+        try{
+          const res=await apiFetch(dayUrl,token,cursor||'');
+          if(!res.ok){if(pg>1)break;throw new Error(`HTTP ${res.status}`);}
+          const json=await res.json();
+          const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+          for(const item of pageData){
+            const code=String(item.tracking_code||item.code||item.order_id||item.ParcelCode||item.id||'').trim();
+            if(code&&!seen.has(code)){seen.add(code);rawData.push(item);dayAdded++;}
+          }
+          const nc=json?.meta?.next_cursor||json?.next_cursor||null;
+          if(!nc||!pageData.length)break;
+          cursor=nc;
+        }catch(pgErr){if(pg>1)break;throw pgErr;}
+      }
+
+      if(dayAdded===0){
+        emptyDaysStreak++;
+      }else{
+        emptyDaysStreak=0;
+      }
+      if(emptyDaysStreak>=EMPTY_DAYS_BREAK_STREAK){
+        break;
+      }
     }
+
     if(!rawData.length){el.textContent='⚠️ لا بيانات في الرد';return;}
     const stMap={'مع المندوب':'with_driver','في الشركة':'in_company','delivered':'delivered','مرتجع':'returned'};
-    const seen=new Set();const mapped=[];
+    const seenMapped=new Set();const mapped=[];
     for(const [i,r] of rawData.entries()){
-      const code=String(r.code||r.id||r.tracking_code||r.order_id||('API-'+Date.now()+'-'+i)).trim();
-      if(seen.has(code))continue;seen.add(code);
+      const code=String(r.tracking_code||r.code||r.order_id||r.ParcelCode||r.id||('API-'+Date.now()+'-'+i)).trim();
+      if(seenMapped.has(code))continue;seenMapped.add(code);
       mapped.push({tracking_code:code,customer_name:String(r.client_name||r.customer_name||r.name||'—').trim(),customer_phone:String(r.receiver_phone||r.customer_phone||r.phone||'—').trim(),status:stMap[r.status]||r.status||'with_driver',delay_days:parseInt(r[delayField]||r.delay_days||0)||0,upload_date:new Date().toISOString().split('T')[0]});
     }
     if(!MANUAL_EXCEL_SHIPMENTS_ONLY){
@@ -4194,7 +4270,7 @@ async function fetchFromAPI(){
         if(!res.ok){const err=await res.text();throw new Error('فشل مزامنة الطرود: '+err.substring(0,120));}
       }
     }
-    el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${mapped.length} طرد من API (${pg} صفحة)${MANUAL_EXCEL_SHIPMENTS_ONLY?' — بدون إدخال لجدول الطرود الرئيسي':''}</span>`;
+    el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${mapped.length} طرد من API (${totalPages} صفحة)${MANUAL_EXCEL_SHIPMENTS_ONLY?' — بدون إدخال لجدول الطرود الرئيسي':''}</span>`;
     toast(`✅ ${mapped.length} طرد من API`,'s');
     await loadShipments();loadDbStats();
   }catch(e){el.innerHTML=`<span style="color:var(--red)">❌ ${e.message}</span>`;toast('خطأ في API: '+e.message,'e');}
@@ -4310,8 +4386,7 @@ function gTab(id){
     home:renderHome,
     shipments:()=>{loadCachedAPIShipments();updateAPIKPIs();renderAPIShipments();renderAPIFetchLog();},
     drivers:renderDrivers,
-    returns:renderReturns,
-    transfers:renderTransfers,
+    'branch-followup':()=>{setBranchFollowupTab('company');},
     janzour:()=>{buildJanzourSet();renderJanzour();},
     'janzour-rates':()=>{renderJanzourRatesPage();},
     'service-kpi':()=>{renderServiceKpiPage();},
@@ -4323,6 +4398,18 @@ function gTab(id){
     users:renderUsersPage,
   };
   if(renders[id])renders[id]();
+}
+
+function setBranchFollowupTab(mode){
+  const target=mode==='transfers'?'transfers':'company';
+  const modeEl=document.getElementById('bf-mode');
+  if(modeEl&&modeEl.value!==target)modeEl.value=target;
+  const compPane=document.getElementById('bf-company-pane');
+  const trPane=document.getElementById('bf-transfers-pane');
+  if(compPane)compPane.style.display=target==='company'?'block':'none';
+  if(trPane)trPane.style.display=target==='transfers'?'block':'none';
+  if(target==='company')renderReturns();
+  else renderTransfers();
 }
 
 // Tab click delegation (sidebar)
@@ -4341,14 +4428,15 @@ function goShipments(filterType, filterVal){
 // ── Navigate to API shipments tab with filter ──
 function goAPIShipments(filterType, filterVal){
   gTab('shipments');
-  const delayEl=document.getElementById('a-fd');
   const statusEl=document.getElementById('a-fst');
-  if(delayEl)delayEl.value='';
+  const mainTypeEl=document.getElementById('a-main-type');
+  if(mainTypeEl)mainTypeEl.value='';
   if(statusEl)statusEl.value='';
-  if(filterType==='delay'&&delayEl)delayEl.value=filterVal;
+  if(filterType==='delay'&&mainTypeEl){
+    mainTypeEl.value=filterVal==='ok'?'with_driver':'';
+  }
   if(filterType==='status'&&statusEl)statusEl.value=filterVal;
-  apiSeg='all';
-  document.querySelectorAll('.seg[data-aseg]').forEach(el=>el.classList.toggle('on',el.dataset.aseg==='all'));
+  setAPISeg('all');
   renderAPIShipments();
 }
 
@@ -4599,7 +4687,7 @@ async function renderStaff(){
   const capTotal=document.getElementById('staff-api-total');
   if(capEl){
     if(!apiShipments.length){
-      capEl.innerHTML='<div style="text-align:center;padding:24px;color:var(--mute)">لا توجد طرود API — اضغط "جلب الآن" من تبويب طرود API</div>';
+      capEl.innerHTML='<div style="text-align:center;padding:24px;color:var(--mute)">لا توجد طرود API — تأكد من تفعيل الجلب التلقائي</div>';
       if(capTotal)capTotal.textContent='0 طرد';
     } else {
       if(capTotal)capTotal.textContent=apiShipments.length+' طرد';
@@ -5004,33 +5092,13 @@ let apiFetchLog=[];
 let aSortKey='delay_days', aSortDir='desc';
 let apiFilteredData=[], apiFilteredIds=[], apiLastSelectedSid='';
 
-const API_SOURCE_KEYS=['source','origin','created_via','import_source','upload_source','channel','entry_type'];
-const NON_API_SOURCE_TOKENS=['sheet','excel','manual','upload','csv','import','شيت','اكسل','إكسل','يدوي','رفع'];
-const API_SOURCE_TOKENS=['api','api_only','external_api','nawris_api','webhook','endpoint'];
-
-function normalizeSourceToken(v){
-  return String(v||'').trim().toLowerCase();
-}
-function hasAnyToken(value,tokens){
-  const n=normalizeSourceToken(value);
-  if(!n)return false;
-  return tokens.some(t=>n===t||n.includes(t));
-}
 function isAPIOriginRow(row){
-  const sourceValues=API_SOURCE_KEYS
-    .map(k=>row?.[k])
-    .filter(v=>v!==undefined&&v!==null&&String(v).trim()!=='');
-  if(!sourceValues.length)return true; // no explicit source metadata: keep row
-  if(sourceValues.some(v=>hasAnyToken(v,NON_API_SOURCE_TOKENS)))return false;
-  if(sourceValues.some(v=>hasAnyToken(v,API_SOURCE_TOKENS)))return true;
+  // Keep all rows returned by API. Do not exclude by source fields.
   return true;
 }
 function isAPIShipmentRecord(s){
   if(!s||typeof s!=='object')return false;
-  if(!isAPIOriginRow(s))return false;
-  if(String(s.source||'').trim())return true;
-  if(String(s.id||'').startsWith('api_'))return true;
-  return !!s.fetched_at;
+  return true;
 }
 
 // ══════════════════════════════════════════
@@ -5100,17 +5168,25 @@ function buildJanzourSet(){
   rebuildJanzourShipments();
 }
 function rebuildJanzourShipments(){
+  const assignments=getAPIAssignments();
+  const me=CU?.name||'';
+  const branchScoped=getAllowedBranchesForUser(CU);
   janzourShipments=apiShipments.filter(s=>{
     const name=(s.client_name||'').trim().toLowerCase();
     // Exact match OR partial match (store name is contained in client name)
-    if(janzourStoreSet.has(name))return true;
-    for(const sn of janzourStoreSet){if(name.includes(sn)||sn.includes(name))return true;}
-    return false;
+    let ok=janzourStoreSet.has(name);
+    if(!ok){
+      for(const sn of janzourStoreSet){if(name.includes(sn)||sn.includes(name)){ok=true;break;}}
+    }
+    if(!ok)return false;
+    if(branchScoped.length&&!userCanAccessBranch(CU,s.current_branch||''))return false;
+    if(CU?.role==='employee'&&String(assignments[s.tracking_code]||'').trim()!==me)return false;
+    return true;
   });
 }
 
 function resetAPIFilters(){
-  ['a-q','a-fd','a-fst','a-fdays','a-fcap','a-fbr','a-fgov'].forEach(id=>{
+  ['a-q','a-view-mode','a-main-type','a-fst','a-fbr'].forEach(id=>{
     const el=document.getElementById(id);
     if(el){if(el.tagName==='INPUT')el.value='';else el.selectedIndex=0;}
   });
@@ -5119,15 +5195,12 @@ function resetAPIFilters(){
 
 function setAPISeg(s){
   apiSeg=s;aPage=1;
-  document.querySelectorAll('[data-aseg]').forEach(el=>el.classList.toggle('on',el.dataset.aseg===s));
+  const viewEl=document.getElementById('a-view-mode');
+  if(viewEl&&viewEl.value!==s)viewEl.value=s;
   renderAPIShipments();
 }
 
-// Listen for seg clicks
-document.addEventListener('click',e=>{
-  const seg=e.target.closest('[data-aseg]');
-  if(seg)setAPISeg(seg.dataset.aseg);
-});
+// Seg click listener removed in favor of dropdown list
 
 async function fetchAPIShipments(){
   // Try to get API settings from the upload page inputs or from saved settings
@@ -5163,39 +5236,60 @@ async function fetchAPIShipments(){
   if(stEl)stEl.textContent='جارٍ الجلب...';
 
   try{
-    // ── CURSOR PAGINATION FETCH ──
-    // API returns 100 items per page with next_cursor for pagination
+    // ── CURSOR PAGINATION FETCH (from day 2 to last available day) ──
     let rawData=[];
     const seen=new Set();
     const baseUrl=url.replace(/[?&]delay_days=[^&]*/g,'').replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
     const sep=baseUrl.includes('?')?'&':'?';
-    const startUrl=`${baseUrl}${sep}delay_days=1`;
+    const MIN_DELAY_DAYS=2;
+    const MAX_DELAY_SCAN_DAYS=2000; // safety cap
+    const EMPTY_DAYS_BREAK_STREAK=25; // stop when trailing days are empty
+    const MAX_PAGES_PER_DAY=200;
+    let emptyDaysStreak=0;
 
-    let nextCursor=null;
-    let pageNum=0;
-    const MAX_PAGES=200; // safety limit ~20,000 shipments
+    for(let delayDay=MIN_DELAY_DAYS;delayDay<=MAX_DELAY_SCAN_DAYS;delayDay++){
+      let nextCursor=null;
+      let dayAdded=0;
+      const dayBaseUrl=`${baseUrl}${sep}delay_days=${delayDay}`;
 
-    do{
-      pageNum++;
-      const pageUrl=nextCursor?`${startUrl}&cursor=${encodeURIComponent(nextCursor)}`:startUrl;
-      if(el)el.textContent=`⏳ جلب الصفحة ${pageNum}... [${rawData.length} طرد حتى الآن]`;
+      for(let pageNum=1;pageNum<=MAX_PAGES_PER_DAY;pageNum++){
+        if(el)el.textContent=`⏳ جلب اليوم ${delayDay} - صفحة ${pageNum}... [${rawData.length} طرد حتى الآن]`;
 
-      const res=await apiFetch(pageUrl,token);
-      if(!res.ok){console.warn(`Page ${pageNum} failed: ${res.status}`);break;}
-      const json=await res.json();
+        // IMPORTANT: proxy expects cursor in request body (3rd arg), not only in URL.
+        const res=await apiFetch(dayBaseUrl,token,nextCursor||'');
+        if(!res.ok){
+          console.warn(`Delay day ${delayDay}, page ${pageNum} failed: ${res.status}`);
+          break;
+        }
 
-      const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
-      nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
+        const json=await res.json();
+        const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+        nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
 
-      let newCount=0;
-      for(const item of pageData){
-        const code=String(item.code||item.id||item.tracking_code||'').trim();
-        if(code&&!seen.has(code)){seen.add(code);rawData.push(item);newCount++;}
+        let newCount=0;
+        for(const item of pageData){
+          const code=String(item.tracking_code||item.code||item.order_id||item.ParcelCode||item.id||'').trim();
+          if(code&&!seen.has(code)){
+            seen.add(code);
+            rawData.push(item);
+            newCount++;
+          }
+        }
+        dayAdded+=newCount;
+        console.log(`Delay ${delayDay}d | page ${pageNum}: ${pageData.length} items, ${newCount} new, total: ${rawData.length}, next_cursor: ${nextCursor?'yes':'no'}`);
+
+        if(!nextCursor||!pageData.length)break;
       }
-      console.log(`Page ${pageNum}: ${pageData.length} items, ${newCount} new, total: ${rawData.length}, next_cursor: ${nextCursor?'yes':'no'}`);
 
-      if(!pageData.length)break;
-    }while(nextCursor&&pageNum<MAX_PAGES);
+      if(dayAdded===0){
+        emptyDaysStreak++;
+      }else{
+        emptyDaysStreak=0;
+      }
+      if(emptyDaysStreak>=EMPTY_DAYS_BREAK_STREAK){
+        break;
+      }
+    }
 
     if(!rawData.length){
       if(el)el.textContent='⚠️ لا بيانات في رد API';
@@ -5220,15 +5314,20 @@ async function fetchAPIShipments(){
       return s; // Keep original if no match
     }
     const seen2=new Set();
+    const previousStatusByCode={};
+    apiShipments.forEach(s=>{if(s?.tracking_code)previousStatusByCode[s.tracking_code]=s.status||'';});
     apiShipments=[];
-    let skippedNonApi=0;
+    apiReturnsShipments=[];
 
     for(const [i,r] of rawData.entries()){
-      if(!isAPIOriginRow(r)){
-        skippedNonApi++;
-        continue;
-      }
-      const code=String(r.code||r.id||r.tracking_code||r.order_id||r.ParcelCode||('API-'+Date.now()+'-'+i)).trim();
+      const codeCandidates=[
+        r.tracking_code,
+        r.code,
+        r.order_id,
+        r.ParcelCode,
+        r.id,
+      ].map(v=>String(v??'').trim()).filter(Boolean);
+      const code=String(codeCandidates[0]||('API-'+Date.now()+'-'+i)).trim();
       if(seen2.has(code))continue;seen2.add(code);
 
       const days=parseInt(r.delay_days||r[delayField]||r['عدد الايام المتأخرة']||r['التأخير']||0)||0;
@@ -5247,10 +5346,12 @@ async function fetchAPIShipments(){
       const area=String(r.area||r.region_name||r['المنطقة']||'').trim();
       const rawStatus=r.status||r['الحالة']||'with_driver';
       const clientId=r.client_id||'';
+      const resolvedStatus=resolveStatus(rawStatus);
 
-      apiShipments.push({
+      const mappedShipment={
         id:'api_'+code,
         tracking_code:code,
+        code_pool:codeCandidates.join(' '),
         client_name:clientName,
         client_id:clientId,
         receiver_name:receiverName,
@@ -5260,23 +5361,61 @@ async function fetchAPIShipments(){
         driver_name:captain,
         captain_phone:'',
         current_branch:currentBranch,
+        previous_branch:String(r.previous_branch||r['الفرع السابق']||'').trim(),
+        received_branch:String(r.received_branch||r['الفرع المستلم']||'').trim(),
         government:government,
         area:area,
         raw_status:rawStatus,
-        status:resolveStatus(rawStatus),
+        status:resolvedStatus,
         delay_days:days,
         source:'api',
         fetched_at:new Date().toISOString(),
         rep_commission:null,
         branch_commission:null
-      });
+      };
+      apiShipments.push(mappedShipment);
     }
+
+    // keep API captains cache as source-of-truth for dynamic captains
+    apiCaptainsCache=[...new Set(
+      [...apiShipments]
+        .map(s=>({name:String(s.captain||'').trim(),phone:String(s.captain_phone||'').trim(),branch:String(s.current_branch||'').trim()}))
+        .filter(c=>c.name)
+        .map(c=>JSON.stringify(c))
+    )].map(x=>JSON.parse(x));
 
     // ── MATCH CAPTAIN PHONES FROM drivers_db ──
     enrichAPICaptainPhones();
 
     // Save to localStorage for persistence
     localStorage.setItem('api_shipments',JSON.stringify(apiShipments));
+    localStorage.setItem('api_returns_shipments',JSON.stringify(apiReturnsShipments));
+    localStorage.setItem('api_captains_cache',JSON.stringify(apiCaptainsCache));
+
+    // status transitions from API update = handled KPI event
+    try{
+      const assignments=getAPIAssignments();
+      const nowIso=new Date().toISOString();
+      const events=JSON.parse(localStorage.getItem('employee_kpi_events')||'[]');
+      apiShipments.forEach(s=>{
+        const prev=previousStatusByCode[s.tracking_code]||'';
+        if(prev&&prev!==s.status){
+          const employee=assignments[s.tracking_code]||'';
+          if(employee){
+            events.push({
+              tracking_code:s.tracking_code,
+              employee_name:employee,
+              old_status:prev,
+              new_status:s.status,
+              delay_days:Number(s.delay_days||0),
+              processed_at:nowIso,
+              processing_minutes:Math.max(1,Number(s.delay_days||0)*24*60)
+            });
+          }
+        }
+      });
+      localStorage.setItem('employee_kpi_events',JSON.stringify(events.slice(-20000)));
+    }catch(e){console.warn('employee_kpi_events',e);}
 
     // Log this fetch
     const logEntry={time:new Date().toLocaleString('ar-LY'),count:apiShipments.length,status:'success'};
@@ -5285,7 +5424,7 @@ async function fetchAPIShipments(){
     localStorage.setItem('api_fetch_log',JSON.stringify(apiFetchLog));
 
     // Update UI
-    if(el)el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${apiShipments.length} طرد API${skippedNonApi?` (تم استبعاد ${skippedNonApi} من الشيت/الرفع اليدوي)`:''} — ${new Date().toLocaleTimeString('ar-LY')}</span>`;
+    if(el)el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${apiShipments.length} طرد — ${new Date().toLocaleTimeString('ar-LY')}</span>`;
     if(dot)dot.className='sync-dot';
     if(stEl)stEl.textContent='متصل — '+apiShipments.length+' طرد';
     document.getElementById('api-last-fetch').textContent='آخر جلب: '+new Date().toLocaleTimeString('ar-LY');
@@ -5327,7 +5466,7 @@ async function fetchAPIShipments(){
     buildJanzourSet();
     refreshJanzourRatesPanels();
     if(document.getElementById('tab-janzour')?.classList.contains('on'))renderJanzour();
-    toast(`✅ ${apiShipments.length} طرد من API${skippedNonApi?` (استبعاد ${skippedNonApi} غير API)`:''} — جنزور: ${janzourShipments.length} طرد`,'s');
+    toast(`✅ ${apiShipments.length} طرد من API — جنزور: ${janzourShipments.length} طرد`,'s');
 
   }catch(e){
     if(el)el.innerHTML=`<span style="color:var(--red)">❌ ${e.message}</span>`;
@@ -5363,9 +5502,9 @@ function connectAPI2(){
 }
 
 function updateAPIKPIs(){
-  const crit=apiShipments.filter(s=>cls(s.delay_days)==='critical').length;
-  const warn=apiShipments.filter(s=>cls(s.delay_days)==='warning').length;
-  const ok=apiShipments.filter(s=>cls(s.delay_days)==='ok').length;
+  const crit=apiShipments.filter(s=>cls(s.delay_days,s.status)==='critical').length;
+  const warn=apiShipments.filter(s=>cls(s.delay_days,s.status)==='warning').length;
+  const ok=apiShipments.filter(s=>cls(s.delay_days,s.status)==='ok').length;
   const drv=apiShipments.filter(s=>s.status==='with_driver').length;
   const comp=apiShipments.filter(s=>s.status==='in_company').length;
 
@@ -5378,10 +5517,14 @@ function updateAPIKPIs(){
   document.getElementById('tb-api').textContent=apiShipments.length;
 
   // Segments counts
-  document.getElementById('asn-all').textContent=apiShipments.length;
-  document.getElementById('asn-driver').textContent=drv;
-  document.getElementById('asn-comp').textContent=comp;
-  document.getElementById('asn-late').textContent=apiShipments.filter(s=>cls(s.delay_days)!=='ok').length;
+  const asnAll=document.getElementById('asn-all');
+  const asnDrv=document.getElementById('asn-driver');
+  const asnComp=document.getElementById('asn-comp');
+  const asnLate=document.getElementById('asn-late');
+  if(asnAll)asnAll.textContent=apiShipments.length;
+  if(asnDrv)asnDrv.textContent=drv;
+  if(asnComp)asnComp.textContent=comp;
+  if(asnLate)asnLate.textContent=apiShipments.filter(s=>cls(s.delay_days,s.status)!=='ok').length;
 
   // Summary card
   const statusGroups={};
@@ -5410,15 +5553,29 @@ function renderAPIFetchLog(){
   `).join('');
 }
 
+function normalizeSearchToken(v){
+  return String(v??'')
+    // remove zero-width and direction marks that break matching visually
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g,'')
+    // normalize Arabic-Indic digits to latin digits
+    .replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    .replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    .toLowerCase()
+    .trim();
+}
+
+function normalizeCodeToken(v){
+  // Keep only letters and digits for robust code matching
+  return normalizeSearchToken(v).replace(/[^a-z0-9]/g,'');
+}
+
 function renderAPIShipments(){
-  const q=(document.getElementById('a-q')?.value||'').toLowerCase();
-  const fd=document.getElementById('a-fd')?.value||'';
+  const qRaw=(document.getElementById('a-q')?.value||'');
+  const q=normalizeSearchToken(qRaw);
+  const qCode=normalizeCodeToken(qRaw);
+  const mainType=document.getElementById('a-main-type')?.value||'';
   const fst=document.getElementById('a-fst')?.value||'';
-  const fdays=document.getElementById('a-fdays')?.value||'';
-  const fcap=document.getElementById('a-fcap')?.value||'';
   const fbr=document.getElementById('a-fbr')?.value||'';
-  const fgov=document.getElementById('a-fgov')?.value||'';
-  const femp=document.getElementById('a-femp')?.value||'';
   const assignments=getAPIAssignments();
   function updateAPISortHeaderIcons(){
     const keys=['tracking_code','assigned_to','client_name','receiver_name','customer_phone','captain','current_branch','government','area','status','delay_days','cr_result','cr_note'];
@@ -5430,28 +5587,30 @@ function renderAPIShipments(){
   }
 
   // Build filter dropdowns
-  const caps=[...new Set(apiShipments.map(s=>s.captain).filter(Boolean))].sort();
   const brs=[...new Set(apiShipments.map(s=>s.current_branch).filter(Boolean))].sort();
-  const govs=[...new Set(apiShipments.map(s=>s.government).filter(Boolean))].sort();
-  const capEl=document.getElementById('a-fcap');
-  if(capEl&&!fcap){capEl.innerHTML='<option value="">كل المناديب</option>'+caps.map(c=>`<option>${c}</option>`).join('');}
   const brEl=document.getElementById('a-fbr');
   if(brEl&&!fbr){brEl.innerHTML='<option value="">كل الفروع</option>'+brs.map(b=>`<option>${b}</option>`).join('');}
-  const govEl=document.getElementById('a-fgov');
-  if(govEl&&!fgov){govEl.innerHTML='<option value="">كل المحافظات</option>'+govs.map(g=>`<option>${g}</option>`).join('');}
-  const empEl=document.getElementById('a-femp');
-  if(empEl&&!femp){
-    const emps=Object.entries(USERS).filter(([,u])=>u.status!=='inactive').map(([,u])=>u.name);
-    empEl.innerHTML='<option value="">كل الموظفين</option>'+emps.map(e=>`<option>${e}</option>`).join('');
-  }
 
   const myName=CU?.name||'';
+  const isManager=CU?.role==='manager';
+  const isEmployeeScoped=CU?.role==='employee';
+  const myAllowedBranches=getAllowedBranchesForUser(CU);
   let list=[...apiShipments];
+
+  // Branch-scope RBAC (received-branch)
+  if(myAllowedBranches.length){
+    list=list.filter(s=>userCanAccessBranch(CU,s.current_branch||''));
+  }
+  // Assignment isolation: employee sees only own assigned parcels
+  if(isEmployeeScoped){
+    list=list.filter(s=>String(assignments[s.tracking_code]||'').trim()===myName);
+  }
 
   // Segment filter
   if(apiSeg==='driver') list=list.filter(s=>s.status==='with_driver');
+  else if(apiSeg==='returned') list=list.filter(s=>s.status==='returned');
   else if(apiSeg==='company') list=list.filter(s=>s.status==='in_company');
-  else if(apiSeg==='late') list=list.filter(s=>cls(s.delay_days)!=='ok');
+  else if(apiSeg==='late') list=list.filter(s=>cls(s.delay_days,s.status)!=='ok');
   else if(apiSeg==='mine') list=list.filter(s=>assignments[s.tracking_code]===myName);
   else if(apiSeg==='unassigned') list=list.filter(s=>!assignments[s.tracking_code]);
 
@@ -5460,27 +5619,22 @@ function renderAPIShipments(){
   if(el('asn-all'))el('asn-all').textContent=apiShipments.length;
   if(el('asn-mine'))el('asn-mine').textContent=apiShipments.filter(s=>assignments[s.tracking_code]===myName).length;
   if(el('asn-driver'))el('asn-driver').textContent=apiShipments.filter(s=>s.status==='with_driver').length;
+  if(el('asn-returned'))el('asn-returned').textContent=apiShipments.filter(s=>s.status==='returned').length;
   if(el('asn-comp'))el('asn-comp').textContent=apiShipments.filter(s=>s.status==='in_company').length;
-  if(el('asn-late'))el('asn-late').textContent=apiShipments.filter(s=>cls(s.delay_days)!=='ok').length;
+  if(el('asn-late'))el('asn-late').textContent=apiShipments.filter(s=>cls(s.delay_days,s.status)!=='ok').length;
   if(el('asn-unassigned'))el('asn-unassigned').textContent=apiShipments.filter(s=>!assignments[s.tracking_code]).length;
 
   list=list.filter(s=>{
-    if(fd&&cls(s.delay_days)!==fd)return false;
     if(fst&&s.status!==fst)return false;
-    if(fcap&&s.captain!==fcap)return false;
     if(fbr&&s.current_branch!==fbr)return false;
-    if(fgov&&s.government!==fgov)return false;
-    if(femp&&assignments[s.tracking_code]!==femp)return false;
-    if(fdays){
-      const d=s.delay_days||0;
-      if(fdays==='0-5'&&(d<0||d>5))return false;
-      if(fdays==='6-10'&&(d<6||d>10))return false;
-      if(fdays==='11-15'&&(d<11||d>15))return false;
-      if(fdays==='16-30'&&(d<16||d>30))return false;
-      if(fdays==='31-60'&&(d<31||d>60))return false;
-      if(fdays==='60+'&&d<61)return false;
+    if(mainType&&s.status!==mainType)return false;
+    if(q){
+      const hay=normalizeSearchToken(`${s.tracking_code} ${s.client_name} ${s.receiver_name} ${s.captain} ${s.customer_phone} ${s.current_branch} ${s.government} ${s.area}`);
+      const codeHay=normalizeCodeToken(`${s.tracking_code||''} ${s.code_pool||''}`);
+      const qMatchesText=hay.includes(q);
+      const qMatchesCode=qCode!==''&&codeHay.includes(qCode);
+      if(!qMatchesText&&!qMatchesCode)return false;
     }
-    if(q&&!`${s.tracking_code} ${s.client_name} ${s.receiver_name} ${s.captain} ${s.customer_phone} ${s.current_branch} ${s.government} ${s.area}`.toLowerCase().includes(q))return false;
     return true;
   }).sort((a,b)=>{
     const av=(()=>{
@@ -5531,7 +5685,7 @@ function renderAPIShipments(){
 
   const tbody=document.getElementById('a-tbody');
   if(!page.length){
-    tbody.innerHTML=`<tr><td colspan="18" style="text-align:center;padding:32px;color:var(--mute)">🔍 لا نتائج — اضغط "جلب الآن" لجلب البيانات من API</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="18" style="text-align:center;padding:32px;color:var(--mute)">🔍 لا نتائج — انتظر الجلب التلقائي أو فعّل الاتصال</td></tr>`;
     const allEl=document.getElementById('achk-all');
     if(allEl)allEl.checked=false;
     buildAPIPgn(total,totalP);
@@ -5549,7 +5703,7 @@ function renderAPIShipments(){
     const assignCell=assignedTo
       ?`<span class="badge b-grn" style="font-size:10px">${assignedTo}</span><button class="btn btn-ghost btn-sm" data-a="undo-assign" data-code="${tc}" style="font-size:10px;padding:2px 6px;margin-inline-start:4px">↩</button>`
       :`<span class="badge b-dim" style="font-size:10px">⏳ غير مسند</span>`;
-    return`<tr class="pr" data-asid="${sid}" style="cursor:pointer;${assignedTo?'background:rgba(58,201,120,.08);':''}${cls(s.delay_days)==='critical'?'background:rgba(255,58,92,.04)':''}${assignedTo===myName?';border-right:2px solid var(--pur)':''}">
+    return`<tr class="pr" data-asid="${sid}" style="cursor:pointer;${assignedTo?'background:rgba(58,201,120,.08);':''}${cls(s.delay_days,s.status)==='critical'?'background:rgba(255,58,92,.04)':''}${assignedTo===myName?';border-right:2px solid var(--pur)':''}">
       <td><input type="checkbox" data-asid="${sid}" ${apiChecked.has(sid)?'checked':''} style="width:16px;height:16px"></td>
       <td class="mob-hide" style="color:var(--dim);font-size:10px;text-align:center">${(aPage-1)*aPER+idx+1}</td>
       <td class="code-cell">${backofficeOrderLinkHtml(s.tracking_code)}</td>
@@ -5562,7 +5716,7 @@ function renderAPIShipments(){
       <td class="mob-hide" style="font-size:11px;color:var(--pale)">${s.government||'—'}</td>
       <td class="mob-hide" style="font-size:11px;color:var(--mute)">${s.area||'—'}</td>
       <td>${stBadge(s.status)}</td>
-      <td>${dBadge(s.delay_days)}</td>
+      <td>${dBadge(s.delay_days,s.status)}</td>
       <td class="mob-hide"><select class="acr-sel" data-asid="${sid}" data-code="${tc}" style="background:var(--bg4);border:1px solid var(--rim);border-radius:4px;padding:2px 4px;font-size:10px;color:var(--white);font-family:var(--font)">
         <option value="" ${!cResult?'selected':''}>—</option>
         <option value="solved" ${cResult==='solved'?'selected':''}>✅ تم الحل</option>
@@ -5925,7 +6079,7 @@ function renderJanzour(){
 
   const tbody=el('j-tbody');
   if(!page.length){
-    tbody.innerHTML=`<tr><td colspan="15" style="text-align:center;padding:32px;color:var(--mute)">${janzourShipments.length?'🔍 لا نتائج مطابقة':'🔌 اضغط "جلب الآن" في طرود API لتحميل البيانات'}</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="15" style="text-align:center;padding:32px;color:var(--mute)">${janzourShipments.length?'🔍 لا نتائج مطابقة':'🔌 لا توجد بيانات بعد — فعّل اتصال API والجلب التلقائي'}</td></tr>`;
     const allEl=document.getElementById('jchk-all');if(allEl)allEl.checked=false;
   } else {
     tbody.innerHTML=page.map((s,i)=>{
@@ -6295,12 +6449,12 @@ async function moveAPIToMain(s){
   }catch(e){toast('خطأ: '+e.message,'e');}
 }
 
-// ── ENRICH CAPTAIN PHONES FROM DRIVERS DB ──
+// ── ENRICH CAPTAIN PHONES FROM API cache / drivers ──
 function enrichAPICaptainPhones(){
-  if(!apiShipments.length||!drivers_db.length)return;
+  if(!apiShipments.length)return;
   // Build lookup maps: exact name, fuzzy name
   const byName={};
-  drivers_db.forEach(d=>{if(d.name)byName[d.name.trim()]=d;});
+  [...(drivers_db||[]),...(apiCaptainsCache||[])].forEach(d=>{if(d?.name)byName[String(d.name).trim()]=d;});
 
   let matched=0,unmatched=[];
   apiShipments.forEach(s=>{
@@ -6326,7 +6480,7 @@ function enrichAPICaptainPhones(){
     }
     if(drv&&drv.phone){
       s.captain_phone=normPhone(drv.phone)||drv.phone;
-      s.driver_id=drv.id;
+      if(drv.id)s.driver_id=drv.id;
       matched++;
     } else {
       if(!unmatched.includes(cap))unmatched.push(cap);
@@ -6371,14 +6525,25 @@ function loadCachedAPIShipments(){
     const cached=localStorage.getItem('api_shipments');
     if(cached){
       const parsed=JSON.parse(cached);
-      apiShipments=Array.isArray(parsed)?parsed.filter(isAPIShipmentRecord):[];
+      apiShipments=Array.isArray(parsed)?parsed:[];
       apiShipments.forEach(s=>{
         if(s.rep_commission===undefined)s.rep_commission=null;
         if(s.branch_commission===undefined)s.branch_commission=null;
+        if(s.code_pool===undefined)s.code_pool=String(s.tracking_code||s.id||'');
       });
       enrichAPICaptainPhones();
       document.getElementById('tb-api').textContent=apiShipments.length;
       updateKPIs();
+    }
+    const returnsCached=localStorage.getItem('api_returns_shipments');
+    if(returnsCached){
+      const parsedR=JSON.parse(returnsCached);
+      apiReturnsShipments=Array.isArray(parsedR)?parsedR:[];
+    }
+    const captainsCached=localStorage.getItem('api_captains_cache');
+    if(captainsCached){
+      const parsedC=JSON.parse(captainsCached);
+      apiCaptainsCache=Array.isArray(parsedC)?parsedC:[];
     }
     // loadAll() runs buildJanzourSet() before apiShipments is filled from cache — refresh subset now
     buildJanzourSet();
@@ -6409,6 +6574,7 @@ function renderUsersPage(){
     const u=users[k];
     const [rc,rl]=roleMap[u.role]||['b-dim','—'];
     const permsCount=(u.perms||[]).length;
+    const branchesCount=(u.allowed_branches||[]).length;
     const totalPerms=ALL_TAB_IDS.length;
     const stBadge=u.status==='active'?'<span class="badge b-grn">نشط</span>':'<span class="badge b-red">معطّل</span>';
     const isSelf=CU&&CU.username===k;
@@ -6421,7 +6587,7 @@ function renderUsersPage(){
       <td><span class="badge ${rc}">${rl}</span></td>
       <td style="font-family:var(--mono);font-size:11px;direction:ltr">${u.phone||'—'}</td>
       <td style="font-size:11px;direction:ltr">${u.email||'—'}</td>
-      <td><span class="badge b-pur">${permsCount}/${totalPerms}</span></td>
+      <td><span class="badge b-pur">${permsCount}/${totalPerms}</span>${branchesCount?` <span class="badge b-blu">${branchesCount} فرع</span>`:''}</td>
       <td>${stBadge}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-ghost btn-sm" onclick="editUser('${k}')">✏️ تعديل</button>
@@ -6444,6 +6610,7 @@ function openUserModal(editKey){
     document.getElementById('um-phone').value=u.phone||'';
     document.getElementById('um-email').value=u.email||'';
     document.getElementById('um-status').value=u.status||'active';
+    document.getElementById('um-branches').value=Array.isArray(u.allowed_branches)?u.allowed_branches.join(', '):'';
     // Set permission checkboxes
     const perms=u.perms||[];
     document.querySelectorAll('.um-perm').forEach(cb=>{
@@ -6460,6 +6627,7 @@ function openUserModal(editKey){
     document.getElementById('um-phone').value='';
     document.getElementById('um-email').value='';
     document.getElementById('um-status').value='active';
+    document.getElementById('um-branches').value='';
     // Default perms for employee
     document.querySelectorAll('.um-perm').forEach(cb=>{
       cb.checked=(cb.value==='home'||cb.value==='shipments'||cb.value==='service-kpi');
@@ -6507,6 +6675,7 @@ function saveUser(){
   const phone=document.getElementById('um-phone').value.trim();
   const email=document.getElementById('um-email').value.trim();
   const status=document.getElementById('um-status').value;
+  const branchesRaw=document.getElementById('um-branches').value||'';
 
   if(!username){toast('أدخل اسم المستخدم','w');return;}
   if(!pass){toast('أدخل كلمة المرور','w');return;}
@@ -6533,7 +6702,8 @@ function saveUser(){
     }
   }
 
-  USERS[username]={pass,role,name,phone,email,status,perms};
+  const allowed_branches=[...new Set(branchesRaw.split(',').map(x=>String(x||'').trim()).filter(Boolean))];
+  USERS[username]={pass,role,name,phone,email,status,perms,allowed_branches};
   saveUsers(USERS);
 
   // If editing self, update session
@@ -6866,10 +7036,32 @@ async function janzourQuickDelivered(sid){
   renderJanzour();
 }
 
-function computeServiceKpiForTarget(displayName){
+function kpiPeriodBounds(period){
+  const now=new Date();
+  if(period==='day'){
+    const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),0,0,0,0);
+    return {start,end:now};
+  }
+  if(period==='week'){
+    const day=now.getDay(); // 0 Sunday
+    const offset=(day+6)%7; // Monday-first
+    const start=new Date(now.getFullYear(),now.getMonth(),now.getDate()-offset,0,0,0,0);
+    return {start,end:now};
+  }
+  const start=new Date(now.getFullYear(),now.getMonth(),1,0,0,0,0);
+  return {start,end:now};
+}
+function computeServiceKpiForTarget(displayName,period='month'){
   buildJanzourSet();
   const a=getAPIAssignments();
-  const list=janzourShipments.filter(s=>(a[s.tracking_code]||'').trim()===displayName);
+  const {start,end}=kpiPeriodBounds(period);
+  const list=janzourShipments.filter(s=>{
+    if((a[s.tracking_code]||'').trim()!==displayName)return false;
+    const ts=String(s.fetched_at||s.updated_at||'').trim();
+    if(!ts)return true;
+    const dt=new Date(ts);
+    return dt>=start&&dt<=end;
+  });
   let d=0,r=0,o=0;
   for(const s of list){
     const t=commissionClassifyDR(s);
@@ -6878,7 +7070,14 @@ function computeServiceKpiForTarget(displayName){
   const term=d+r;
   const rate=term>0?Math.round(1000*d/term)/10:0;
   const earnings=commissionRound2(list.reduce((sum,s)=>sum+(parseFloat(s.rep_commission)||0),0));
-  return {total:list.length,rate,earnings,d,r,o};
+  const events=JSON.parse(localStorage.getItem('employee_kpi_events')||'[]').filter(ev=>{
+    if(String(ev.employee_name||'').trim()!==displayName)return false;
+    const t=new Date(ev.processed_at||'');
+    if(isNaN(t.getTime()))return false;
+    return t>=start&&t<=end;
+  });
+  const avgSpeed=events.length?Math.round(events.reduce((sum,ev)=>sum+Number(ev.processing_minutes||0),0)/events.length):0;
+  return {total:list.length,rate,earnings,d,r,o,avgSpeed,period,start:start.toISOString(),end:end.toISOString(),handled_events:events.length};
 }
 function resourceEmployeeServicePerformance(metrics,user){
   return{
@@ -6886,8 +7085,12 @@ function resourceEmployeeServicePerformance(metrics,user){
     name:user.name,
     total_packages_handled:metrics.total,
     success_rate_percent:metrics.rate,
+    average_processing_minutes:metrics.avgSpeed||0,
+    period:metrics.period||'month',
     total_calculated_earnings:metrics.earnings,
-    delivery_vs_return:{deliveries:metrics.d,returns:metrics.r,other_status_shipments:metrics.o}
+    delivery_vs_return:{deliveries:metrics.d,returns:metrics.r,other_status_shipments:metrics.o},
+    handled_events:metrics.handled_events||0,
+    range:{start:metrics.start,end:metrics.end}
   };
 }
 function renderServiceKpiPage(){
@@ -6907,13 +7110,15 @@ function renderServiceKpiPage(){
     }
   }
   const targetName=(mgr&&sel&&sel.value)?sel.value:CU.name;
+  const period=document.getElementById('skpi-period')?.value||'month';
   const targetEntry=Object.entries(USERS).find(([,v])=>v.name===targetName);
   const uObj=targetEntry?{username:targetEntry[0],...targetEntry[1]}:CU;
-  const m=computeServiceKpiForTarget(targetName);
+  const m=computeServiceKpiForTarget(targetName,period);
   const el=id=>document.getElementById(id);
   if(el('skpi-total'))el('skpi-total').textContent=m.total;
   if(el('skpi-rate'))el('skpi-rate').textContent=m.rate+'%';
   if(el('skpi-earn'))el('skpi-earn').textContent=m.earnings;
+  if(el('skpi-speed'))el('skpi-speed').textContent=m.avgSpeed;
   if(el('skpi-d'))el('skpi-d').textContent=m.d;
   if(el('skpi-r'))el('skpi-r').textContent=m.r;
   if(el('skpi-o'))el('skpi-o').textContent=m.o;
@@ -6931,11 +7136,15 @@ function getAPIAssignments(){
 function saveAPIAssignments(obj){localStorage.setItem('api_assignments',JSON.stringify(obj));}
 
 function setAssignedTo(code,empName){
+  const s=apiShipments.find(x=>String(x.tracking_code)===String(code));
+  if(empName&&s&&!canAssignShipmentToEmployee(s,empName)){
+    toast(`❌ لا يمكن إسناد ${code} إلى ${empName} خارج صلاحيات الفروع`,'e');
+    return;
+  }
   const a=getAPIAssignments();
   if(empName)a[code]=empName;
   else delete a[code];
   saveAPIAssignments(a);
-  const s=apiShipments.find(x=>String(x.tracking_code)===String(code));
   renderAPIShipments();
   renderAssignStats();
   updateAssignLiveCounter();
@@ -6962,7 +7171,13 @@ function autoAssign(method){
 
   if(method==='equal'){
     // Round-robin
-    unassigned.forEach((s,i)=>{a[s.tracking_code]=emps[i%emps.length];});
+    let idx=0;
+    unassigned.forEach(s=>{
+      const eligible=emps.filter(emp=>canAssignShipmentToEmployee(s,emp));
+      if(!eligible.length)return;
+      a[s.tracking_code]=eligible[idx%eligible.length];
+      idx++;
+    });
   }
   else if(method==='branch'){
     // Group by branch then assign
@@ -6975,7 +7190,9 @@ function autoAssign(method){
     const branches=Object.keys(branchMap);
     branches.forEach((br,bi)=>{
       const emp=emps[bi%emps.length];
-      branchMap[br].forEach(s=>{if(!a[s.tracking_code])a[s.tracking_code]=emp;});
+      branchMap[br].forEach(s=>{
+        if(!a[s.tracking_code]&&canAssignShipmentToEmployee(s,emp))a[s.tracking_code]=emp;
+      });
     });
   }
   else if(method==='workload'){
@@ -6984,7 +7201,9 @@ function autoAssign(method){
     emps.forEach(e=>{counts[e]=0;});
     Object.values(a).forEach(e=>{if(counts[e]!==undefined)counts[e]++;});
     unassigned.forEach(s=>{
-      const emp=emps.reduce((a,b)=>counts[a]<=counts[b]?a:b);
+      const eligible=emps.filter(emp=>canAssignShipmentToEmployee(s,emp));
+      if(!eligible.length)return;
+      const emp=eligible.reduce((a,b)=>counts[a]<=counts[b]?a:b);
       a[s.tracking_code]=emp;
       counts[emp]++;
     });
@@ -7003,9 +7222,13 @@ function assignSelected(){
   if(!emp){toast('اختر موظفاً أولاً','w');return;}
   const a=getAPIAssignments();
   let count=0;
-  apiChecked.forEach(sid=>{
-    const s=apiShipments.find(x=>String(x.id)===sid);
-    if(s){a[s.tracking_code]=emp;count++;}
+  const selected=getVisibleSelectedApiShipments();
+  if(!selected.length){toast('حدد الطرود المطلوبة أولاً','w');return;}
+  selected.forEach(s=>{
+    if(canAssignShipmentToEmployee(s,emp)){
+      a[s.tracking_code]=emp;
+      count++;
+    }
   });
   saveAPIAssignments(a);
   renderAPIShipments();
@@ -7020,7 +7243,7 @@ function bulkAssignFilteredBranch(){
   const targets=apiFilteredData.filter(s=>!branch||String(s.current_branch||'')===branch);
   if(!targets.length){toast('لا توجد طرود مطابقة للفلتر الحالي','w');return;}
   const a=getAPIAssignments();
-  targets.forEach(s=>{a[s.tracking_code]=emp;});
+  targets.forEach(s=>{if(canAssignShipmentToEmployee(s,emp))a[s.tracking_code]=emp;});
   saveAPIAssignments(a);
   renderAPIShipments();
   renderAssignStats();
@@ -7031,8 +7254,9 @@ function bulkAssignFilteredBranch(){
 function unassignSelected(){
   const a=getAPIAssignments();
   let count=0;
-  apiChecked.forEach(sid=>{
-    const s=apiShipments.find(x=>String(x.id)===sid);
+  const selected=getVisibleSelectedApiShipments();
+  if(!selected.length){toast('حدد الطرود المطلوبة أولاً','w');return;}
+  selected.forEach(s=>{
     if(s&&a[s.tracking_code]){delete a[s.tracking_code];count++;}
   });
   saveAPIAssignments(a);
@@ -7130,7 +7354,7 @@ function renderAssignStats(){
     if(!emp)return;
     if(!empMap[emp])empMap[emp]={name:emp,total:0,crit:0,done:0};
     empMap[emp].total++;
-    if(cls(s.delay_days)==='critical')empMap[emp].crit++;
+    if(cls(s.delay_days,s.status)==='critical')empMap[emp].crit++;
     const cr=getCR(s.tracking_code);
     if(cr.result==='solved'||cr.result==='contacted')empMap[emp].done++;
   });
@@ -7152,7 +7376,11 @@ function renderAssignStats(){
     }).join('')}`;
 }
 
-window.addEventListener('load',init);
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',()=>{init();},{once:true});
+}else{
+  init();
+}
 </script>
 </body>
 </html>
