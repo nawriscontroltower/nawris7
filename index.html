@@ -4223,10 +4223,10 @@ async function fetchFromAPI(){
 
     if(!rawData.length){el.textContent='⚠️ لا بيانات في الرد';return;}
     const stMap={'مع المندوب':'with_driver','في الشركة':'in_company','delivered':'delivered','مرتجع':'returned'};
-    const seen=new Set();const mapped=[];
+    const seenMapped=new Set();const mapped=[];
     for(const [i,r] of rawData.entries()){
       const code=String(r.tracking_code||r.code||r.order_id||r.ParcelCode||r.id||('API-'+Date.now()+'-'+i)).trim();
-      if(seen.has(code))continue;seen.add(code);
+      if(seenMapped.has(code))continue;seenMapped.add(code);
       mapped.push({tracking_code:code,customer_name:String(r.client_name||r.customer_name||r.name||'—').trim(),customer_phone:String(r.receiver_phone||r.customer_phone||r.phone||'—').trim(),status:stMap[r.status]||r.status||'with_driver',delay_days:parseInt(r[delayField]||r.delay_days||0)||0,upload_date:new Date().toISOString().split('T')[0]});
     }
     if(!MANUAL_EXCEL_SHIPMENTS_ONLY){
