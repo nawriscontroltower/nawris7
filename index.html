@@ -3468,7 +3468,12 @@ function getBFSenderBranch(row){
 }
 function getBFReceiverBranch(row){
   return String(
-    row.received_branch||row.to_branch||row.toBranch||row.receiver_branch||row.destination_branch||row.branch_to||row.current_branch||row.currentBranch||''
+    row.received_branch||row.to_branch||row.toBranch||row.receiver_branch||row.destination_branch||row.branch_to||''
+  ).trim();
+}
+function getBFCompanyBranch(row){
+  return String(
+    row.received_branch||row.current_branch||row.currentBranch||''
   ).trim();
 }
 function getBFDedupKey(row){
@@ -3503,15 +3508,15 @@ function renderReturns(){
       rawNorm.includes('داخل الفرع');
     if(!inCompany)return false;
     if(Number(s.delay_days||0)<2)return false;
-    const scopeBranch=getBFReceiverBranch(s);
+    const scopeBranch=getBFCompanyBranch(s);
     if(scopeBranch&&!userCanAccessBranch(CU,scopeBranch))return false;
     return true;
   });
-  setBranchFilterOptions('bf-company-branch',companyRows.map(s=>getBFReceiverBranch(s)),'كل الفروع');
+  setBranchFilterOptions('bf-company-branch',companyRows.map(s=>getBFCompanyBranch(s)),'كل الفروع');
   const selectedBranch=String(document.getElementById('bf-company-branch')?.value||'').trim();
   const minDays=Math.max(0,parseInt(document.getElementById('bf-company-days-min')?.value||'2')||2);
   const list=companyRows.filter(s=>{
-    const branch=getBFReceiverBranch(s);
+    const branch=getBFCompanyBranch(s);
     if(selectedBranch&&branch!==selectedBranch)return false;
     if(Number(s.delay_days||0)<minDays)return false;
     return true;
@@ -3523,7 +3528,7 @@ function renderReturns(){
     <td>${s.client_name||s.receiver_name||'—'}</td>
     <td>${s.captain||'—'}</td>
     <td>${stBadge(s.status||s.raw_status)}</td>
-    <td>${getBFReceiverBranch(s)||'—'}</td>
+    <td>${getBFCompanyBranch(s)||'—'}</td>
     <td>${dBadge(s.delay_days,s.status)}</td>
     <td><span class="badge b-pur">API</span></td>
   </tr>`).join('');
@@ -4512,7 +4517,7 @@ async function fetchBranchFollowupRowsByDelay(baseUrl,token,delayDays,maxPages){
         item.previous_branch||item.previousBranch||item.from_branch||item.fromBranch||item.sender_branch||item.source_branch||item.branch_from||''
       ).trim();
       const toBranch=String(
-        item.received_branch||item.receivedBranch||item.to_branch||item.toBranch||item.receiver_branch||item.destination_branch||item.branch_to||item.current_branch||item.currentBranch||''
+        item.received_branch||item.receivedBranch||item.to_branch||item.toBranch||item.receiver_branch||item.destination_branch||item.branch_to||''
       ).trim();
       const rawDelay=item.delay_days??item.delay??item.delayed_days??item.overdue_days??0;
       const parsedDelay=parseInt(String(rawDelay).replace(/[^\d-]/g,''),10);
@@ -4535,7 +4540,7 @@ async function fetchBranchFollowupRowsByDelay(baseUrl,token,delayDays,maxPages){
         from_branch:fromBranch,
         received_branch:toBranch,
         to_branch:toBranch,
-        current_branch:toBranch||String(item.current_branch||item.currentBranch||'').trim(),
+        current_branch:String(item.current_branch||item.currentBranch||'').trim(),
         transfer_date:transferDate,
         created_at:createdAt,
         updated_at:String(item.updated_at||'').trim(),
