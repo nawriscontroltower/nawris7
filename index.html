@@ -2861,6 +2861,18 @@ function setSyncState(st,msg){
   d.className='sync-dot'+(st==='err'?' err':st==='busy'?' busy':'');
   document.getElementById('sync-txt').textContent=msg;
 }
+let activeGlobalFetchOps=0;
+function setGlobalFetchState(isBusy,label='جار الجلب...'){
+  if(isBusy){
+    activeGlobalFetchOps++;
+    setSyncState('busy',label);
+    return;
+  }
+  activeGlobalFetchOps=Math.max(0,activeGlobalFetchOps-1);
+  if(activeGlobalFetchOps===0){
+    setSyncState('ok','متصل');
+  }
+}
 
 // ══════════════════════════════════════════
 // DROPDOWNS
@@ -4529,6 +4541,7 @@ async function fetchCouriersFromAPI(){
   const el=document.getElementById('couriers-api-status');
   if(!url){toast('أدخل رابط API المناديب أولاً','e');return;}
   el.textContent='⏳ جارٍ جلب بيانات المناديب...';
+  setGlobalFetchState(true,'جار جلب المناديب...');
   try{
     let cursor='';
     let page=0;
@@ -4578,6 +4591,8 @@ async function fetchCouriersFromAPI(){
   }catch(e){
     el.innerHTML=`<span style="color:var(--red)">❌ ${e.message}</span>`;
     toast('خطأ API المناديب: '+e.message,'e');
+  }finally{
+    setGlobalFetchState(false);
   }
 }
 
@@ -4761,6 +4776,7 @@ async function fetchFromAPI(){
   const el=document.getElementById('api-status');
   if(!url){toast('أدخل رابط API أولاً','e');return;}
   el.textContent='⏳ جارٍ جلب البيانات...';
+  setGlobalFetchState(true,'جار جلب الطرود...');
   try{
     // Fast full-sync by direct pagination only (no delay_days scanning).
     const PAGE_SIZE=500;
@@ -4858,7 +4874,12 @@ async function fetchFromAPI(){
       await loadShipments();
     }
     loadDbStats();
-  }catch(e){el.innerHTML=`<span style="color:var(--red)">❌ ${e.message}</span>`;toast('خطأ في API: '+e.message,'e');}
+  }catch(e){
+    el.innerHTML=`<span style="color:var(--red)">❌ ${e.message}</span>`;
+    toast('خطأ في API: '+e.message,'e');
+  }finally{
+    setGlobalFetchState(false);
+  }
 }
 function setAutoFetch(){
   const interval=parseInt(document.getElementById('api-interval')?.value||'0');
