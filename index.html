@@ -997,7 +997,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div style="font-size:18px;font-weight:800">🧭 متابعة الفروع</div>
       <div style="display:flex;gap:7px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="loadReturns();loadTransfers()">↻ تحديث</button>
+        <button class="btn btn-ghost btn-sm" onclick="refreshBranchFollowupAPI(true)">↻ تحديث</button>
       </div>
     </div>
     <div class="fbar" style="margin-bottom:12px">
@@ -2088,6 +2088,7 @@ let sSortKey='delay_days';
 let sSortDir='desc';
 let autoFetchTimer=null;
 let apiReturnsShipments=[], apiCaptainsCache=[];
+let branchFollowupRows=[], branchFollowupLastFetchAt=0;
 let staffLogState={packageId:'',trackingCode:'',storeName:'',all:[],shown:5};
 let CFG={critDays:3,warnDays:2,discount:50,company:'النورس للشحن',mgrPhone:''};
 let WA_TPLS=[
@@ -3383,7 +3384,8 @@ function renderDrivers(){
 function getReturnLocs(){return getAllReturnStatuses().map(s=>s.key);}
 function renderReturns(){
   // Branch follow-up / "in company": API rows delayed > 1 day.
-  const list=(apiShipments||[]).filter(s=>{
+  const sourceRows=(branchFollowupRows&&branchFollowupRows.length)?branchFollowupRows:(apiShipments||[]);
+  const list=sourceRows.filter(s=>{
     const raw=String(s.raw_status||'').trim();
     const rawNorm=raw.replace(/\s+/g,' ');
     const st=String(s.status||'').trim().toLowerCase();
@@ -3441,7 +3443,8 @@ async function updateRetLoc(id,current){
 function getTransferSts(){return getAllTransferStatuses().map(s=>s.key);}
 function renderTransfers(){
   // Branch follow-up / "in transfer": API rows delayed > 2 days.
-  const list=(apiShipments||[]).filter(s=>{
+  const sourceRows=(branchFollowupRows&&branchFollowupRows.length)?branchFollowupRows:(apiShipments||[]);
+  const list=sourceRows.filter(s=>{
     const raw=String(s.raw_status||'').trim();
     const rawNorm=raw.replace(/\s+/g,' ');
     const st=String(s.status||'').trim().toLowerCase();
@@ -4193,6 +4196,70 @@ async function apiFetch(baseUrl,token,cursor){
   });
   return r;
 }
+
+function getBranchFollowupAPIConfig(){
+  const defaultUrl='https://backoffice.nawris.algoriza.com/external-api/orders/delayed?delay_days=5';
+  const url=(localStorage.getItem('branch_followup_api_url')||'').trim()||defaultUrl;
+  const token=(localStorage.getItem('branch_followup_api_token')||'').trim()
+    ||document.getElementById('api-token2')?.value?.trim()
+    ||document.getElementById('api-token')?.value?.trim()
+    ||'';
+  return {url,token};
+}
+
+async function refreshBranchFollowupAPI(force=false){
+  const now=Date.now();
+  if(!force&&branchFollowupRows.length&&(now-branchFollowupLastFetchAt)<5*60*1000){
+    return;
+  }
+  const {url,token}=getBranchFollowupAPIConfig();
+  if(!url||!token)return;
+
+  try{
+    const baseUrl=url.replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
+    const seen=new Set();
+    const rows=[];
+    const MAX_PAGES=150;
+    let nextCursor=null;
+
+    for(let page=1;page<=MAX_PAGES;page++){
+      const res=await apiFetch(baseUrl,token,nextCursor||'');
+      if(!res.ok)break;
+      const json=await res.json();
+      const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+      nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
+
+      for(const item of pageData){
+        const code=String(item.code||item.tracking_code||item.order_id||item.ParcelCode||item.id||'').trim();
+        if(!code||seen.has(code))continue;
+        seen.add(code);
+        rows.push({
+          tracking_code:code,
+          client_name:String(item.client_name||item.customer_name||item.name||'—').trim(),
+          captain:String(item.captain||item.driver_name||item.driver||item.assignee||'').trim(),
+          status:String(item.status||'').trim(),
+          raw_status:String(item.status||'').trim(),
+          delay_days:parseInt(item.delay_days||0)||0,
+          previous_branch:String(item.previous_branch||item.previousBranch||'').trim(),
+          received_branch:String(item.received_branch||item.receivedBranch||'').trim(),
+          current_branch:String(item.current_branch||item.currentBranch||'').trim(),
+        });
+      }
+      if(!nextCursor||!pageData.length)break;
+    }
+
+    branchFollowupRows=rows;
+    branchFollowupLastFetchAt=Date.now();
+    localStorage.setItem('branch_followup_api_rows',JSON.stringify(branchFollowupRows));
+    localStorage.setItem('branch_followup_last_fetch_at',String(branchFollowupLastFetchAt));
+
+    renderReturns();
+    renderTransfers();
+  }catch(e){
+    console.warn('branchFollowupAPI',e);
+  }
+}
+
 async function testAPI(){
   const url=document.getElementById('api-url')?.value?.trim();
   const token=document.getElementById('api-token')?.value?.trim();
@@ -4400,7 +4467,7 @@ function gTab(id){
     home:renderHome,
     shipments:()=>{loadCachedAPIShipments();updateAPIKPIs();renderAPIShipments();renderAPIFetchLog();},
     drivers:renderDrivers,
-    'branch-followup':()=>{setBranchFollowupTab('company');},
+    'branch-followup':()=>{setBranchFollowupTab('company');void refreshBranchFollowupAPI();},
     janzour:()=>{buildJanzourSet();renderJanzour();},
     'janzour-rates':()=>{renderJanzourRatesPage();},
     'service-kpi':()=>{renderServiceKpiPage();},
@@ -6559,6 +6626,13 @@ function loadCachedAPIShipments(){
       const parsedC=JSON.parse(captainsCached);
       apiCaptainsCache=Array.isArray(parsedC)?parsedC:[];
     }
+    const bfCached=localStorage.getItem('branch_followup_api_rows');
+    if(bfCached){
+      const parsedBf=JSON.parse(bfCached);
+      branchFollowupRows=Array.isArray(parsedBf)?parsedBf:[];
+    }
+    const bfTs=localStorage.getItem('branch_followup_last_fetch_at');
+    branchFollowupLastFetchAt=parseInt(bfTs||'0')||0;
     // loadAll() runs buildJanzourSet() before apiShipments is filled from cache — refresh subset now
     buildJanzourSet();
     refreshJanzourRatesPanels();
