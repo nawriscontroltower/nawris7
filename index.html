@@ -4179,42 +4179,33 @@ async function fetchFromAPI(){
   if(!url){toast('أدخل رابط API أولاً','e');return;}
   el.textContent='⏳ جارٍ جلب البيانات...';
   try{
-    // Paginated fetch across delay-days range (2+)
+    // Paginated fetch for delays greater than one day (delay_days=2)
     let rawData=[];
     const seen=new Set();
     const baseUrl=url.replace(/[?&]delay_days=[^&]*/g,'').replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
     const sep=baseUrl.includes('?')?'&':'?';
-    const MIN_API_DELAY_DAYS=2;
-    const MAX_API_DELAY_DAYS=365;
+    const DELAY_MORE_THAN_DAYS=1;
+    const TARGET_DELAY_DAYS=DELAY_MORE_THAN_DAYS+1; // => 2
     const MAX_PAGES_PER_DAY=100;
     let totalPages=0;
-
-    for(let delayDay=MIN_API_DELAY_DAYS;delayDay<=MAX_API_DELAY_DAYS;delayDay++){
-      let cursor='';
-      let pg=0;
-      let dayAdded=0;
-      const dayUrl=`${baseUrl}${sep}delay_days=${delayDay}`;
-
-      while(pg<MAX_PAGES_PER_DAY){
-        pg++;
-        totalPages++;
-        el.textContent=`⏳ اليوم ${delayDay} - صفحة ${pg}...`;
-        try{
-          const res=await apiFetch(dayUrl,token,cursor||'');
-          if(!res.ok){if(pg>1)break;throw new Error(`HTTP ${res.status}`);}
-          const json=await res.json();
-          const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
-          for(const item of pageData){
-            const code=String(item.tracking_code||item.code||item.order_id||item.ParcelCode||item.id||'').trim();
-            if(code&&!seen.has(code)){seen.add(code);rawData.push(item);dayAdded++;}
-          }
-          const nc=json?.meta?.next_cursor||json?.next_cursor||null;
-          if(!nc||!pageData.length)break;
-          cursor=nc;
-        }catch(pgErr){if(pg>1)break;throw pgErr;}
-      }
-
-      // do not early-break on empty days; some APIs have non-contiguous delay buckets
+    let cursor='';
+    const dayUrl=`${baseUrl}${sep}delay_days=${TARGET_DELAY_DAYS}`;
+    for(let pg=1;pg<=MAX_PAGES_PER_DAY;pg++){
+      totalPages++;
+      el.textContent=`⏳ جلب التأخير +${DELAY_MORE_THAN_DAYS} يوم - صفحة ${pg}...`;
+      try{
+        const res=await apiFetch(dayUrl,token,cursor||'');
+        if(!res.ok){if(pg>1)break;throw new Error(`HTTP ${res.status}`);}
+        const json=await res.json();
+        const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+        for(const item of pageData){
+          const code=String(item.tracking_code||item.code||item.order_id||item.ParcelCode||item.id||'').trim();
+          if(code&&!seen.has(code)){seen.add(code);rawData.push(item);}
+        }
+        const nc=json?.meta?.next_cursor||json?.next_cursor||null;
+        if(!nc||!pageData.length)break;
+        cursor=nc;
+      }catch(pgErr){if(pg>1)break;throw pgErr;}
     }
 
     if(!rawData.length){el.textContent='⚠️ لا بيانات في الرد';return;}
@@ -5187,54 +5178,44 @@ async function fetchAPIShipments(){
   if(stEl)stEl.textContent='جارٍ الجلب...';
 
   try{
-    // ── CURSOR PAGINATION FETCH (delay range) ──
-    // This endpoint can return records for one exact delay day per request.
-    // So we fetch day-by-day starting from 2 days and merge all pages.
+    // ── CURSOR PAGINATION FETCH (delays > 1 day) ──
+    // Use delay_days=2 and paginate through next_cursor pages.
     let rawData=[];
     const seen=new Set();
     const baseUrl=url.replace(/[?&]delay_days=[^&]*/g,'').replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
     const sep=baseUrl.includes('?')?'&':'?';
-    const MIN_API_DELAY_DAYS=2;
-    const MAX_API_DELAY_DAYS=365;
+    const DELAY_MORE_THAN_DAYS=1;
+    const TARGET_DELAY_DAYS=DELAY_MORE_THAN_DAYS+1; // => 2
     const MAX_PAGES_PER_DAY=200;
+    let nextCursor=null;
+    const dayBaseUrl=`${baseUrl}${sep}delay_days=${TARGET_DELAY_DAYS}`;
 
-    for(let delayDay=MIN_API_DELAY_DAYS;delayDay<=MAX_API_DELAY_DAYS;delayDay++){
-      let nextCursor=null;
-      let pageNum=0;
-      let dayAdded=0;
-      const dayBaseUrl=`${baseUrl}${sep}delay_days=${delayDay}`;
+    for(let pageNum=1;pageNum<=MAX_PAGES_PER_DAY;pageNum++){
+      if(el)el.textContent=`⏳ جلب التأخير +${DELAY_MORE_THAN_DAYS} يوم - صفحة ${pageNum}... [${rawData.length} طرد حتى الآن]`;
 
-      do{
-        pageNum++;
-        if(el)el.textContent=`⏳ جلب اليوم ${delayDay} - صفحة ${pageNum}... [${rawData.length} طرد حتى الآن]`;
+      // IMPORTANT: proxy expects cursor in request body (3rd arg), not only in URL.
+      const res=await apiFetch(dayBaseUrl,token,nextCursor||'');
+      if(!res.ok){
+        console.warn(`Delay day ${TARGET_DELAY_DAYS}, page ${pageNum} failed: ${res.status}`);
+        break;
+      }
 
-        // IMPORTANT: proxy expects cursor in request body (3rd arg), not only in URL.
-        const res=await apiFetch(dayBaseUrl,token,nextCursor||'');
-        if(!res.ok){
-          console.warn(`Delay day ${delayDay}, page ${pageNum} failed: ${res.status}`);
-          break;
+      const json=await res.json();
+      const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+      nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
+
+      let newCount=0;
+      for(const item of pageData){
+        const code=String(item.tracking_code||item.code||item.order_id||item.ParcelCode||item.id||'').trim();
+        if(code&&!seen.has(code)){
+          seen.add(code);
+          rawData.push(item);
+          newCount++;
         }
+      }
+      console.log(`Delay ${TARGET_DELAY_DAYS}d | page ${pageNum}: ${pageData.length} items, ${newCount} new, total: ${rawData.length}, next_cursor: ${nextCursor?'yes':'no'}`);
 
-        const json=await res.json();
-        const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
-        nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
-
-        let newCount=0;
-        for(const item of pageData){
-          const code=String(item.tracking_code||item.code||item.order_id||item.ParcelCode||item.id||'').trim();
-          if(code&&!seen.has(code)){
-            seen.add(code);
-            rawData.push(item);
-            newCount++;
-          }
-        }
-        dayAdded+=newCount;
-        console.log(`Delay ${delayDay}d | page ${pageNum}: ${pageData.length} items, ${newCount} new, total: ${rawData.length}, next_cursor: ${nextCursor?'yes':'no'}`);
-
-        if(!pageData.length)break;
-      }while(nextCursor&&pageNum<MAX_PAGES_PER_DAY);
-
-      // do not early-break on empty days; some APIs return sparse delay buckets
+      if(!nextCursor||!pageData.length)break;
     }
 
     if(!rawData.length){
