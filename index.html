@@ -3945,7 +3945,7 @@ function showDriverRpt(){
 const MF={
   regions:[{k:'name',l:'اسم المنطقة',req:true},{k:'code',l:'الكود'},{k:'description',l:'وصف'}],
   branches:[{k:'name',l:'اسم الفرع',req:true},{k:'manager_name',l:'اسم المدير'},{k:'manager_phone',l:'هاتف المدير'},{k:'address',l:'العنوان'}],
-  drivers:[{k:'name',l:'اسم المندوب',req:true},{k:'phone',l:'الهاتف'},{k:'phone2',l:'هاتف2'},{k:'vehicle_type',l:'وسيلة النقل'}],
+  drivers:[{k:'name',l:'اسم المندوب',req:true},{k:'phone',l:'الهاتف'},{k:'phone2',l:'هاتف2'},{k:'vehicle_type',l:'وسيلة النقل'},{k:'branch',l:'الفرع'}],
   stores:[{k:'name',l:'اسم المتجر',req:true},{k:'phone',l:'الهاتف'},{k:'address',l:'العنوان'}],
 };
 const MTITLES={regions:'🗺️ المناطق',branches:'🏢 الفروع',drivers:'👤 المناديب',stores:'🏪 المتاجر'};
@@ -3961,7 +3961,7 @@ async function renderMasterContent(){
   try{
     const data=driversReadonly?[...(drivers_db||[])]:await sb(masterSeg,'GET',null,'?select=*&order=created_at.desc&limit=500');
     const flds=MF[masterSeg]||[];
-    const labels={name:'الاسم',code:'الكود',description:'الوصف',manager_name:'المدير',manager_phone:'هاتف المدير',address:'العنوان',phone:'الهاتف',phone2:'هاتف2',vehicle_type:'وسيلة النقل'};
+    const labels={name:'الاسم',code:'الكود',description:'الوصف',manager_name:'المدير',manager_phone:'هاتف المدير',address:'العنوان',phone:'الهاتف',phone2:'هاتف2',vehicle_type:'وسيلة النقل',branch:'الفرع'};
     document.getElementById('mt-wrap').innerHTML=`<div style="font-size:11px;color:var(--mute);margin-bottom:8px">${data.length} سجل</div><div class="tw"><table><thead><tr>${flds.map(f=>`<th>${labels[f.k]||f.k}</th>`).join('')}<th>إجراء</th></tr></thead><tbody>${data.length?data.map(r=>`<tr>${flds.map(f=>`<td>${r[f.k]||'—'}</td>`).join('')}<td>${driversReadonly?'<span style="color:var(--mute)">—</span>':`<div style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm" onclick="openMEdit('${masterSeg}','${r.id}')">✏️</button><button class="btn btn-red btn-sm" onclick="deleteMaster('${masterSeg}','${r.id}')">🗑️</button></div>`}</td></tr>`).join(''):'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--mute)">لا بيانات</td></tr>'}</tbody></table></div>`;
   }catch(e){document.getElementById('mt-wrap').innerHTML=`<div style="color:var(--red);padding:16px">خطأ: ${e.message}</div>`;}
 }
@@ -4371,9 +4371,17 @@ async function uploadShipments(rows,forceStatus){
 // ══════════════════════════════════════════
 // CORS proxy via Cloudflare Worker — sends cursor separately to avoid encoding issues
 const PROXY='https://misty-wildflower-54d1.medodaw519.workers.dev';
+function cleanApiUrl(raw){
+  return String(raw||'').trim().replace(/^['"]+|['"]+$/g,'');
+}
+function withQueryParam(url,key,value){
+  const u=new URL(cleanApiUrl(url),location.origin);
+  u.searchParams.set(key,String(value));
+  return u.toString();
+}
 async function apiFetch(baseUrl,token,cursor){
   const cleanToken=token?token.replace(/^(Bearer|Token)\s*/i,'').trim():'';
-  const body={url:baseUrl,token:cleanToken};
+  const body={url:cleanApiUrl(baseUrl),token:cleanToken};
   if(cursor)body.cursor=cursor;
   const r=await fetch(PROXY,{
     method:'POST',
@@ -4384,35 +4392,60 @@ async function apiFetch(baseUrl,token,cursor){
 }
 
 function mapCouriersFromApiPayload(payload){
-  const candidates=Array.isArray(payload)
-    ? payload
-    : (payload?.couriers||payload?.drivers||payload?.data||payload?.results||payload?.items||[]);
+  const candidates=extractCouriersCandidates(payload);
   if(!Array.isArray(candidates))return [];
   const seen=new Set();
   const mapped=[];
+  const getByPath=(obj,path)=>path.split('.').reduce((acc,key)=>acc&&acc[key]!==undefined?acc[key]:undefined,obj);
+  const pick=(row,paths)=>{
+    for(const p of paths){
+      const v=getByPath(row,p);
+      if(v!==undefined&&v!==null&&String(v).trim()!=='')return v;
+    }
+    return '';
+  };
   for(const row of candidates){
     const name=String(
-      row?.name||row?.full_name||row?.driver_name||row?.courier_name||row?.employee_name||row?.captain||row?.['اسم المندوب']||''
+      pick(row,[
+        'name','full_name','driver_name','courier_name','employee_name','captain','ar_name','en_name',
+        'driver.name','driver.full_name','captain_info.name','employee.name','user.name','اسم المندوب'
+      ])||''
     ).trim();
     if(!name)continue;
     const phoneRaw=String(
-      row?.phone||row?.mobile||row?.phone_number||row?.driver_phone||row?.courier_phone||row?.['هاتف المندوب']||''
+      pick(row,[
+        'phone','mobile','phone_number','driver_phone','courier_phone','primary_phone','whatsapp','msisdn',
+        'contact.phone','driver.phone','driver.mobile','captain_info.phone','employee.phone','هاتف المندوب'
+      ])||''
     ).trim();
-    const phone2Raw=String(row?.phone2||row?.secondary_phone||row?.alt_phone||'').trim();
+    const phone2Raw=String(
+      pick(row,['phone2','secondary_phone','alt_phone','backup_phone','contact.phone2','driver.phone2'])||''
+    ).trim();
     const key=[normalizePersonName(name),normPhone(phoneRaw)||phoneRaw].join('::');
     if(seen.has(key))continue;
     seen.add(key);
     mapped.push({
-      id:row?.id||row?.driver_id||row?.courier_id||row?.employee_id||null,
+      id:pick(row,['id','driver_id','courier_id','employee_id','captain_id','user_id'])||null,
       name,
       phone:normPhone(phoneRaw)||phoneRaw,
       phone2:normPhone(phone2Raw)||phone2Raw||null,
-      vehicle_type:String(row?.vehicle_type||row?.vehicle||row?.transport_type||'').trim()||null,
-      branch:String(row?.branch||row?.branch_name||row?.current_branch||row?.['الفرع']||'').trim()||null,
+      vehicle_type:String(pick(row,['vehicle_type','vehicle','transport_type','vehicle.name','car_type'])||'').trim()||null,
+      branch:String(pick(row,['branch','branch_name','current_branch','received_branch','location.branch','branch_info.name','الفرع'])||'').trim()||null,
       source:'couriers_api'
     });
   }
   return mapped;
+}
+
+function extractCouriersCandidates(payload){
+  if(Array.isArray(payload))return payload;
+  if(!payload||typeof payload!=='object')return [];
+  const buckets=[
+    payload.couriers,payload.drivers,payload.captains,payload.employees,payload.results,payload.items,payload.data,
+    payload?.data?.items,payload?.data?.drivers,payload?.data?.captains,payload?.data?.employees,payload?.data?.data
+  ];
+  for(const b of buckets){if(Array.isArray(b))return b;}
+  return [];
 }
 
 function applyCouriersApiData(list,{persist=true}={}){
@@ -4437,14 +4470,17 @@ function loadCachedCouriersApiData(){
 }
 
 async function testCouriersAPI(){
-  const url=document.getElementById('couriers-api-url')?.value?.trim();
+  const url=cleanApiUrl(document.getElementById('couriers-api-url')?.value);
   const token=document.getElementById('couriers-api-token')?.value?.trim();
   const el=document.getElementById('couriers-api-status');
   if(!url){toast('أدخل رابط API المناديب','e');return;}
   el.textContent='⏳ جارٍ اختبار API المناديب...';
   try{
     const res=await apiFetch(url,token);
-    if(!res.ok)throw new Error('HTTP '+res.status);
+    if(!res.ok){
+      const errText=await res.text().catch(()=>'');
+      throw new Error(`HTTP ${res.status}${errText?` — ${errText.substring(0,120)}`:''}`);
+    }
     const payload=await res.json();
     const mapped=mapCouriersFromApiPayload(payload);
     el.innerHTML=`<span style="color:var(--grn)">✅ API المناديب يعمل — ${mapped.length} مندوب</span>`;
@@ -4456,21 +4492,53 @@ async function testCouriersAPI(){
 }
 
 async function fetchCouriersFromAPI(){
-  const url=document.getElementById('couriers-api-url')?.value?.trim();
+  const url=cleanApiUrl(document.getElementById('couriers-api-url')?.value);
   const token=document.getElementById('couriers-api-token')?.value?.trim();
   const el=document.getElementById('couriers-api-status');
   if(!url){toast('أدخل رابط API المناديب أولاً','e');return;}
   el.textContent='⏳ جارٍ جلب بيانات المناديب...';
   try{
-    const res=await apiFetch(url,token);
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    const payload=await res.json();
-    const mapped=mapCouriersFromApiPayload(payload);
+    let cursor='';
+    let page=0;
+    const maxPages=200;
+    let pageNum=1;
+    const allRows=[];
+    const dedup=new Set();
+    while(page<maxPages){
+      page++;
+      el.textContent=`⏳ جارٍ جلب المناديب... صفحة ${page}`;
+      const pageUrl=cursor?url:withQueryParam(url,'page',pageNum);
+      const res=await apiFetch(pageUrl,token,cursor||'');
+      if(!res.ok){
+        const errText=await res.text().catch(()=>'');
+        throw new Error(`HTTP ${res.status}${errText?` — ${errText.substring(0,120)}`:''}`);
+      }
+      const payload=await res.json();
+      const chunk=extractCouriersCandidates(payload);
+      for(const row of chunk){
+        const key=JSON.stringify([row?.id||row?.driver_id||row?.courier_id||'',row?.name||row?.full_name||row?.driver_name||'',row?.phone||row?.mobile||'']);
+        if(dedup.has(key))continue;
+        dedup.add(key);
+        allRows.push(row);
+      }
+      const nextCursor=payload?.meta?.next_cursor||payload?.next_cursor||payload?.pagination?.next_cursor||null;
+      const currentPage=Number(payload?.meta?.current_page||payload?.current_page||payload?.pagination?.current_page||pageNum||0);
+      const lastPage=Number(payload?.meta?.last_page||payload?.last_page||payload?.pagination?.last_page||payload?.meta?.total_pages||payload?.total_pages||payload?.pagination?.total_pages||0);
+      if(nextCursor){
+        cursor=nextCursor;
+      }else if(lastPage&&currentPage&&currentPage<lastPage){
+        pageNum=currentPage+1;
+      }else{
+        break;
+      }
+      if(!chunk.length)break;
+    }
+    const mapped=mapCouriersFromApiPayload(allRows);
     if(!mapped.length)throw new Error('لا توجد بيانات مناديب صالحة في الرد');
     applyCouriersApiData(mapped,{persist:true});
     await sbUp('settings',[{key:'couriers_api_url',value:url},{key:'couriers_api_token',value:token||''}]);
     if(document.getElementById('sts-drivers'))document.getElementById('sts-drivers').innerHTML=`<span style="color:var(--grn)">✅ تم تحديث ${mapped.length} مندوب من API</span>`;
-    el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${mapped.length} مندوب وتفعيلهم كمصدر المناديب</span>`;
+    el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${mapped.length} مندوب من ${page} صفحة وتفعيلهم كمصدر المناديب</span>`;
     if(masterSeg==='drivers'&&document.getElementById('tab-master')?.classList.contains('on'))renderMasterContent();
     renderDrivers();
     renderAPIShipments();
