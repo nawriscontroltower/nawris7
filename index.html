@@ -2476,6 +2476,32 @@ function stBadge(s){
 }
 function ctBadge(id){return contacted.has(String(id))?'<span class="badge b-grn">✅ تم</span>':'<span class="badge b-dim">⏳</span>';}
 function normPhone(p){if(!p)return'';p=String(p).replace(/[^0-9]/g,'');if(p.startsWith('0')&&p.length===10)p='218'+p.slice(1);return p;}
+function normalizePersonName(v){
+  return String(v||'')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function resolveDriverRecordByName(name){
+  const target=normalizePersonName(name);
+  if(!target)return null;
+  const pool=(drivers_db||[]).filter(d=>d&&d.name);
+  let hit=pool.find(d=>normalizePersonName(d.name)===target);
+  if(hit)return hit;
+  hit=pool.find(d=>{
+    const n=normalizePersonName(d.name);
+    return n.includes(target)||target.includes(n);
+  });
+  return hit||null;
+}
+function resolveDriverPhoneForShipment(s){
+  if(!s)return '';
+  const byId=(drivers_db||[]).find(d=>String(d.id||'')===String(s.driver_id||''));
+  const byName=resolveDriverRecordByName(s.driver_name||s.captain||'');
+  const raw=(byId&&byId.phone)||(byName&&byName.phone)||s.driver_phone||s.captain_phone||'';
+  return normPhone(raw)||String(raw||'');
+}
 function normalizeBranchKey(v){return String(v||'').trim().toLowerCase();}
 function isReturnTrackingCode(code){
   const c=String(code||'').trim().toUpperCase();
@@ -3241,10 +3267,10 @@ function openDetail(sid){
   sid=String(sid);
   const s=shipments.find(x=>String(x.id)===sid);if(!s)return;
   // Enrich from local data
-  const drv=drivers_db.find(d=>d.id===s.driver_id || d.name===s.driver_name)||{};
+  const drv=drivers_db.find(d=>String(d.id||'')===String(s.driver_id||'')) || resolveDriverRecordByName(s.driver_name||'') || {};
   const brn=branches.find(b=>b.id===s.current_branch_id || b.name===s.branch_name)||{};
   const rgn=regions.find(r=>r.id===s.region_id || r.name===s.region_name)||{};
-  const driverPhone=drv.phone||s.driver_phone||'';
+  const driverPhone=resolveDriverPhoneForShipment(s);
   const driverName=drv.name||s.driver_name||'';
   const branchName=brn.name||s.branch_name||'';
   const branchManager=brn.manager_name||s.branch_manager||'';
@@ -4591,8 +4617,8 @@ function sendToCustomer(sid){
 function sendToDriver2(sid){
   sid=String(sid);
   const s=shipments.find(x=>String(x.id)===sid);if(!s)return;
-  const drv=drivers_db.find(d=>d.id===s.driver_id||d.name===s.driver_name)||{};
-  const ph=normPhone(drv.phone||s.driver_phone||'');
+  const drv=drivers_db.find(d=>String(d.id||'')===String(s.driver_id||'')) || resolveDriverRecordByName(s.driver_name||'') || {};
+  const ph=normPhone(resolveDriverPhoneForShipment(s));
   const msg=`السلام عليكم ${drv.name||s.driver_name||''}
 🕊️ ${CFG.company}
 
@@ -6319,7 +6345,7 @@ function changeAPIPerPage(val){aPER=parseInt(val)||25;aPage=1;renderAPIShipments
 function openAPIDetail(sid){
   const s=apiShipments.find(x=>String(x.id)===String(sid));if(!s)return;
   const custPhone=s.customer_phone||'';
-  const capPhone=s.captain_phone||'';
+  const capPhone=resolveDriverPhoneForShipment(s);
   const ph=custPhone&&custPhone!=='—'&&custPhone!=='undefined';
   const stLabel=s.raw_status||s.status||'—';
 
@@ -6403,7 +6429,7 @@ function apiWA(sid,target){
   const stLabel=s.raw_status||s.status||'—';
 
   if(target==='captain'){
-    const ph=normPhone(s.captain_phone||'');
+    const ph=normPhone(resolveDriverPhoneForShipment(s));
     if(!ph){toast('لا يوجد رقم للمندوب — تحقق من بيانات المناديب','w');return;}
     const msg=`السلام عليكم ${s.captain||''} 👋\n🕊️ ${CFG.company}\n\nتذكير بطرد متأخر:\n📦 كود الطرد: ${s.tracking_code}\n👤 المتجر: ${s.client_name||'—'}\n📱 المستلم: ${s.receiver_name||'—'}\n📞 هاتف المستلم: ${s.customer_phone||'—'}\n📊 الحالة: ${stLabel}\n⏱️ التأخير: ${s.delay_days} يوم\n🏢 الفرع: ${s.current_branch||'—'}\n\n⚠️ يرجى اتخاذ إجراء فوري\n— إدارة ${CFG.company}`;
     openWAUrl(ph,msg);
@@ -6416,7 +6442,8 @@ function apiWA(sid,target){
       if(brn)branchPhone=brn.manager_phone||'';
     }
     const capName=s.captain||'المندوب';
-    const capPh=s.captain_phone?'\nرقم المندوب: '+s.captain_phone:'';
+    const resolvedCaptainPhone=resolveDriverPhoneForShipment(s);
+    const capPh=resolvedCaptainPhone?'\nرقم المندوب: '+resolvedCaptainPhone:'';
     const brPh=branchPhone?'\n\nللاستفسار يمكنكم التواصل مع فرع '+s.current_branch+' على الرقم: '+branchPhone:'';
     const msg=`السلام عليكم ورحمة الله وبركاته\n${s.receiver_name||s.client_name||''} حياكم الله 🕊️\n\nنود إعلامكم من شركة ${CFG.company} أن طردكم رقم: ${s.tracking_code}\nموجود حالياً مع المندوب: ${capName}${capPh}\n\nوسيتم التواصل معكم لتنسيق موعد التسليم في أقرب وقت إن شاء الله.${brPh}\n\nشكراً لثقتكم بنا 🙏\n— ${CFG.company}`;
     openWAUrl(ph,msg);
@@ -6559,6 +6586,7 @@ function enrichAPICaptainPhones(){
         if(dk)drv=byName[dk];
       }
     }
+    if(!drv)drv=resolveDriverRecordByName(cap);
     if(drv&&drv.phone){
       s.captain_phone=normPhone(drv.phone)||drv.phone;
       if(drv.id)s.driver_id=drv.id;
