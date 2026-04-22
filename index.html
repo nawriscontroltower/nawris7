@@ -4179,22 +4179,48 @@ async function fetchFromAPI(){
   if(!url){toast('أدخل رابط API أولاً','e');return;}
   el.textContent='⏳ جارٍ جلب البيانات...';
   try{
-    // Paginated fetch
-    let rawData=[],cursor='',pg=0;
-    while(pg<20){
-      pg++;
-      el.textContent=`⏳ صفحة ${pg}...`;
-      try{
-        const res=await apiFetch(url,token,cursor||'');
-        if(!res.ok){if(pg>1)break;throw new Error(`HTTP ${res.status}`);}
-        const json=await res.json();
-        const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
-        if(pageData.length)rawData=rawData.concat(pageData);
-        const nc=json?.meta?.next_cursor||json?.next_cursor||null;
-        if(!nc||!pageData.length)break;
-        cursor=nc;
-      }catch(pgErr){if(pg>1)break;throw pgErr;}
+    // Paginated fetch across delay-days range (2+)
+    let rawData=[];
+    const seen=new Set();
+    const baseUrl=url.replace(/[?&]delay_days=[^&]*/g,'').replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
+    const sep=baseUrl.includes('?')?'&':'?';
+    const MIN_API_DELAY_DAYS=2;
+    const MAX_API_DELAY_DAYS=120;
+    const MAX_PAGES_PER_DAY=100;
+    const EMPTY_DAYS_BREAK_STREAK=15;
+    let emptyDaysStreak=0;
+    let totalPages=0;
+
+    for(let delayDay=MIN_API_DELAY_DAYS;delayDay<=MAX_API_DELAY_DAYS;delayDay++){
+      let cursor='';
+      let pg=0;
+      let dayAdded=0;
+      const dayUrl=`${baseUrl}${sep}delay_days=${delayDay}`;
+
+      while(pg<MAX_PAGES_PER_DAY){
+        pg++;
+        totalPages++;
+        el.textContent=`⏳ اليوم ${delayDay} - صفحة ${pg}...`;
+        try{
+          const res=await apiFetch(dayUrl,token,cursor||'');
+          if(!res.ok){if(pg>1)break;throw new Error(`HTTP ${res.status}`);}
+          const json=await res.json();
+          const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+          for(const item of pageData){
+            const code=String(item.tracking_code||item.code||item.order_id||item.ParcelCode||item.id||'').trim();
+            if(code&&!seen.has(code)){seen.add(code);rawData.push(item);dayAdded++;}
+          }
+          const nc=json?.meta?.next_cursor||json?.next_cursor||null;
+          if(!nc||!pageData.length)break;
+          cursor=nc;
+        }catch(pgErr){if(pg>1)break;throw pgErr;}
+      }
+
+      if(dayAdded===0)emptyDaysStreak++;
+      else emptyDaysStreak=0;
+      if(emptyDaysStreak>=EMPTY_DAYS_BREAK_STREAK)break;
     }
+
     if(!rawData.length){el.textContent='⚠️ لا بيانات في الرد';return;}
     const stMap={'مع المندوب':'with_driver','في الشركة':'in_company','delivered':'delivered','مرتجع':'returned'};
     const seen=new Set();const mapped=[];
@@ -4213,7 +4239,7 @@ async function fetchFromAPI(){
         if(!res.ok){const err=await res.text();throw new Error('فشل مزامنة الطرود: '+err.substring(0,120));}
       }
     }
-    el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${mapped.length} طرد من API (${pg} صفحة)${MANUAL_EXCEL_SHIPMENTS_ONLY?' — بدون إدخال لجدول الطرود الرئيسي':''}</span>`;
+    el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${mapped.length} طرد من API (${totalPages} صفحة)${MANUAL_EXCEL_SHIPMENTS_ONLY?' — بدون إدخال لجدول الطرود الرئيسي':''}</span>`;
     toast(`✅ ${mapped.length} طرد من API`,'s');
     await loadShipments();loadDbStats();
   }catch(e){el.innerHTML=`<span style="color:var(--red)">❌ ${e.message}</span>`;toast('خطأ في API: '+e.message,'e');}
@@ -5165,40 +5191,65 @@ async function fetchAPIShipments(){
   if(stEl)stEl.textContent='جارٍ الجلب...';
 
   try{
-    // ── CURSOR PAGINATION FETCH ──
-    // API returns 100 items per page with next_cursor for pagination
+    // ── CURSOR PAGINATION FETCH (delay range) ──
+    // This endpoint can return records for one exact delay day per request.
+    // So we fetch day-by-day starting from 2 days and merge all pages.
     let rawData=[];
     const seen=new Set();
     const baseUrl=url.replace(/[?&]delay_days=[^&]*/g,'').replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
     const sep=baseUrl.includes('?')?'&':'?';
-    const MIN_API_DELAY_DAYS=2; // fetch parcels delayed for 2+ days
-    const startUrl=`${baseUrl}${sep}delay_days=${MIN_API_DELAY_DAYS}`;
+    const MIN_API_DELAY_DAYS=2;
+    const MAX_API_DELAY_DAYS=120;
+    const MAX_PAGES_PER_DAY=200;
+    const EMPTY_DAYS_BREAK_STREAK=15; // stop early after many empty days in a row
+    let emptyDaysStreak=0;
 
-    let nextCursor=null;
-    let pageNum=0;
-    const MAX_PAGES=200; // safety limit ~20,000 shipments
+    for(let delayDay=MIN_API_DELAY_DAYS;delayDay<=MAX_API_DELAY_DAYS;delayDay++){
+      let nextCursor=null;
+      let pageNum=0;
+      let dayAdded=0;
+      const dayBaseUrl=`${baseUrl}${sep}delay_days=${delayDay}`;
 
-    do{
-      pageNum++;
-      const pageUrl=nextCursor?`${startUrl}&cursor=${encodeURIComponent(nextCursor)}`:startUrl;
-      if(el)el.textContent=`⏳ جلب الصفحة ${pageNum}... [${rawData.length} طرد حتى الآن]`;
+      do{
+        pageNum++;
+        const pageUrl=nextCursor?`${dayBaseUrl}&cursor=${encodeURIComponent(nextCursor)}`:dayBaseUrl;
+        if(el)el.textContent=`⏳ جلب اليوم ${delayDay} - صفحة ${pageNum}... [${rawData.length} طرد حتى الآن]`;
 
-      const res=await apiFetch(pageUrl,token);
-      if(!res.ok){console.warn(`Page ${pageNum} failed: ${res.status}`);break;}
-      const json=await res.json();
+        const res=await apiFetch(pageUrl,token);
+        if(!res.ok){
+          console.warn(`Delay day ${delayDay}, page ${pageNum} failed: ${res.status}`);
+          break;
+        }
 
-      const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
-      nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
+        const json=await res.json();
+        const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+        nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
 
-      let newCount=0;
-      for(const item of pageData){
-        const code=String(item.tracking_code||item.code||item.order_id||item.ParcelCode||item.id||'').trim();
-        if(code&&!seen.has(code)){seen.add(code);rawData.push(item);newCount++;}
+        let newCount=0;
+        for(const item of pageData){
+          const code=String(item.tracking_code||item.code||item.order_id||item.ParcelCode||item.id||'').trim();
+          if(code&&!seen.has(code)){
+            seen.add(code);
+            rawData.push(item);
+            newCount++;
+          }
+        }
+        dayAdded+=newCount;
+        console.log(`Delay ${delayDay}d | page ${pageNum}: ${pageData.length} items, ${newCount} new, total: ${rawData.length}, next_cursor: ${nextCursor?'yes':'no'}`);
+
+        if(!pageData.length)break;
+      }while(nextCursor&&pageNum<MAX_PAGES_PER_DAY);
+
+      if(dayAdded===0){
+        emptyDaysStreak++;
+      }else{
+        emptyDaysStreak=0;
       }
-      console.log(`Page ${pageNum}: ${pageData.length} items, ${newCount} new, total: ${rawData.length}, next_cursor: ${nextCursor?'yes':'no'}`);
-
-      if(!pageData.length)break;
-    }while(nextCursor&&pageNum<MAX_PAGES);
+      if(emptyDaysStreak>=EMPTY_DAYS_BREAK_STREAK){
+        console.log(`Stopped early after ${emptyDaysStreak} empty delay days.`);
+        break;
+      }
+    }
 
     if(!rawData.length){
       if(el)el.textContent='⚠️ لا بيانات في رد API';
