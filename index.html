@@ -870,6 +870,12 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <button class="btn btn-wa btn-sm" onclick="bulkWA()">💬 واتساب للمحددين</button>
       </div>
     </div>
+    <div class="segs" style="margin-bottom:12px">
+      <button id="ship-src-local" class="seg on" onclick="switchUnifiedShipmentsSource('local')">Local Shipments</button>
+      <button id="ship-src-api" class="seg" onclick="switchUnifiedShipmentsSource('api')">API Shipments</button>
+    </div>
+    <div id="shipments-api-loading" class="card" style="display:none;padding:14px;margin-bottom:12px">جارٍ تحميل طرود API...</div>
+    <div id="shipments-local-panel">
     <div class="segs">
       <div class="seg on" data-seg="all">الكل <span class="seg-n" id="sn-all">0</span></div>
       <div class="seg" data-seg="driver">🚗 مع المندوب <span class="seg-n" id="sn-driver">0</span></div>
@@ -966,6 +972,8 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <div class="pgn" id="s-pgn"></div>
       </div>
     </div>
+    </div>
+    <div id="shipments-api-panel" style="display:none"></div>
   </div>
 
   <!-- ══ DRIVERS ══ -->
@@ -2333,10 +2341,62 @@ async function startApp(){
   loadCustomStatuses();
   updateStatusFilters();
   loadCustomTemplates();
+  removeDeprecatedTabs();
+  mountUnifiedApiIntoShipments();
   loadCachedAPIShipments();
   // Auto-sync API shipments after drivers are loaded
   setTimeout(autoSyncAPI,1500);
   loadCachedAPIShipments();
+  switchUnifiedShipmentsSource('local');
+}
+
+function removeDeprecatedTabs(){
+  ['api-shipments','janzour-rates','service-kpi','commission-admin'].forEach(tabId=>{
+    document.querySelector(`#nav-tabs .sb-item[data-tab="${tabId}"]`)?.remove();
+    document.getElementById(`tab-${tabId}`)?.remove();
+  });
+}
+
+function mountUnifiedApiIntoShipments(){
+  if(unifiedApiMounted)return;
+  const sourcePage=document.getElementById('tab-api-shipments');
+  const targetPanel=document.getElementById('shipments-api-panel');
+  if(!sourcePage||!targetPanel)return;
+  targetPanel.innerHTML=sourcePage.innerHTML;
+  sourcePage.remove();
+  unifiedApiMounted=true;
+}
+
+async function switchUnifiedShipmentsSource(source){
+  const localBtn=document.getElementById('ship-src-local');
+  const apiBtn=document.getElementById('ship-src-api');
+  const localPanel=document.getElementById('shipments-local-panel');
+  const apiPanel=document.getElementById('shipments-api-panel');
+  const loading=document.getElementById('shipments-api-loading');
+  if(!localBtn||!apiBtn||!localPanel||!apiPanel)return;
+  const showApi=source==='api';
+  localBtn.classList.toggle('on',!showApi);
+  apiBtn.classList.toggle('on',showApi);
+  localPanel.style.display=showApi?'none':'block';
+  apiPanel.style.display=showApi?'block':'none';
+  if(!showApi){
+    renderShipments();
+    return;
+  }
+  if(!unifiedApiFetched){
+    if(loading)loading.style.display='block';
+    try{
+      await fetchAPIShipments();
+      unifiedApiFetched=true;
+    }catch(e){
+      console.warn('load unified api shipments',e);
+      toast('تعذر تحميل طرود API','e');
+    }finally{
+      if(loading)loading.style.display='none';
+    }
+  }else{
+    renderAPIShipments();
+  }
 }
 
 function applyRole(){
@@ -4346,7 +4406,8 @@ function setAlpha(l){
 }
 
 function gTab(id){
-  if(id==='commission-admin'&&(!CU||CU.role!=='manager')){toast('هذه الشاشة للمدير فقط','e');return;}
+  if(id==='api-shipments')id='shipments';
+  if(id==='janzour-rates'||id==='service-kpi'||id==='commission-admin')id='home';
   document.querySelectorAll('#nav-tabs .sb-item').forEach(t=>t.classList.toggle('on',t.dataset.tab===id));
   document.querySelectorAll('.page').forEach(p=>{p.classList.remove('on');p.style.display='none';});
   const pg=document.getElementById('tab-'+id);
@@ -4355,15 +4416,11 @@ function gTab(id){
   if(window.innerWidth<=900)closeSidebar();
   const renders={
     home:renderHome,
-    shipments:renderShipments,
+    shipments:()=>switchUnifiedShipmentsSource('local'),
     drivers:renderDrivers,
     returns:renderReturns,
     transfers:renderTransfers,
-    'api-shipments':()=>{loadCachedAPIShipments();updateAPIKPIs();renderAPIShipments();renderAPIFetchLog();},
     janzour:()=>{buildJanzourSet();renderJanzour();},
-    'janzour-rates':()=>{renderJanzourRatesPage();},
-    'service-kpi':()=>{renderServiceKpiPage();},
-    'commission-admin':()=>{if(!CU||CU.role!=='manager'){toast('هذه الشاشة للمدير فقط','e');return;}renderCommissionAdminPage();},
     whatsapp:renderWA,
     reports:genDaily,
     staff:()=>{sfPage=1;renderStaff();},
@@ -4398,7 +4455,7 @@ function goShipments(filterType, filterVal){
 
 // ── Navigate to API shipments tab with filter ──
 function goAPIShipments(filterType, filterVal){
-  gTab('api-shipments');
+  gTab('shipments');
   const delayEl=document.getElementById('a-fd');
   const statusEl=document.getElementById('a-fst');
   if(delayEl)delayEl.value='';
@@ -4407,7 +4464,7 @@ function goAPIShipments(filterType, filterVal){
   if(filterType==='status'&&statusEl)statusEl.value=filterVal;
   apiSeg='all';
   document.querySelectorAll('.seg[data-aseg]').forEach(el=>el.classList.toggle('on',el.dataset.aseg==='all'));
-  renderAPIShipments();
+  switchUnifiedShipmentsSource('api');
 }
 
 // Seg click delegation for shipments
@@ -5058,6 +5115,7 @@ function updateStatusFilters(){
 // API SHIPMENTS PAGE
 // ══════════════════════════════════════════
 let apiShipments=[], apiSeg='all', aPage=1, aPER=25, apiChecked=new Set(), autoFetchTimer2=null;
+let unifiedApiMounted=false, unifiedApiFetched=false;
 let apiFetchLog=[];
 let aSortKey='delay_days', aSortDir='desc';
 let apiFilteredData=[], apiFilteredIds=[], apiLastSelectedSid='';
