@@ -2701,15 +2701,8 @@ async function loadTransfers(){
       const fallbackFrom=String(r.from_branch||r.branch||'').trim();
       const fallbackTo=String(r.to_branch||r.branch||'').trim();
       const fromBranch=prevBranch||currentBranch||fallbackFrom||'—';
-      let toBranch=recvBranch||fallbackTo||currentBranch||'—';
-      // Some API rows return received_branch same as previous_branch while
-      // current_branch carries the real destination (e.g. "المعري").
-      if(
-        fromBranch&&toBranch&&fromBranch===toBranch&&
-        currentBranch&&currentBranch!==fromBranch
-      ){
-        toBranch=currentBranch;
-      }
+      // Destination branch in transfers must follow current_branch.
+      let toBranch=currentBranch||recvBranch||fallbackTo||'—';
       const branchRoute=`${fromBranch} → ${toBranch}`;
       const delayDaysNow=parseInt(r.delay_days||r.delay||0)||0;
       const derivedTripId=
