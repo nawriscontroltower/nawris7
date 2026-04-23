@@ -2362,7 +2362,10 @@ async function startApp(){
 }
 
 function removeDeprecatedTabs(){
-  ['api-shipments','janzour-rates','service-kpi','commission-admin'].forEach(tabId=>{
+  // Remove API from sidebar only (its page is moved into Shipments panel later).
+  document.querySelector('#nav-tabs .sb-item[data-tab="api-shipments"]')?.remove();
+  // Remove fully deprecated tabs.
+  ['janzour-rates','service-kpi','commission-admin'].forEach(tabId=>{
     document.querySelector(`#nav-tabs .sb-item[data-tab="${tabId}"]`)?.remove();
     document.getElementById(`tab-${tabId}`)?.remove();
   });
@@ -5414,7 +5417,8 @@ async function fetchAPIShipments(){
     if(el)el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${apiShipments.length} طرد — ${new Date().toLocaleTimeString('ar-LY')}</span>`;
     if(dot)dot.className='sync-dot';
     if(stEl)stEl.textContent='متصل — '+apiShipments.length+' طرد';
-    document.getElementById('api-last-fetch').textContent='آخر جلب: '+new Date().toLocaleTimeString('ar-LY');
+    const apiLastFetchEl=document.getElementById('api-last-fetch');
+    if(apiLastFetchEl)apiLastFetchEl.textContent='آخر جلب: '+new Date().toLocaleTimeString('ar-LY');
     const tbApiEl=document.getElementById('tb-api');
     if(tbApiEl)tbApiEl.textContent=apiShipments.length;
 
@@ -5506,16 +5510,16 @@ function updateAPIKPIs(){
   const myDrv=assignedOnly.filter(s=>s.status==='with_driver').length;
   const myReturned=assignedOnly.filter(s=>s.status==='returned').length;
 
-  document.getElementById('ak-total').textContent=isEmployee?assignedOnly.length:apiShipments.length;
-  document.getElementById('ak-crit').textContent=isEmployee?myCrit:crit;
-  document.getElementById('ak-warn').textContent=warn;
-  document.getElementById('ak-ok').textContent=isEmployee?myReturned:ok;
-  document.getElementById('ak-driver').textContent=isEmployee?myDrv:drv;
-  document.getElementById('ak-comp').textContent=comp;
+  const setTxt=(id,v)=>{const x=document.getElementById(id);if(x)x.textContent=v;};
+  setTxt('ak-total',isEmployee?assignedOnly.length:apiShipments.length);
+  setTxt('ak-crit',isEmployee?myCrit:crit);
+  setTxt('ak-warn',warn);
+  setTxt('ak-ok',isEmployee?myReturned:ok);
+  setTxt('ak-driver',isEmployee?myDrv:drv);
+  setTxt('ak-comp',comp);
   const tbApiEl2=document.getElementById('tb-api');
   if(tbApiEl2)tbApiEl2.textContent=isEmployee?assignedOnly.length:apiShipments.length;
 
-  const setTxt=(id,v)=>{const x=document.getElementById(id);if(x)x.textContent=v;};
   const setDisp=(id,v)=>{const x=document.getElementById(id);if(x)x.style.display=v;};
   if(isEmployee){
     setTxt('ak-lbl-total','الأكواد المسندة لي');
