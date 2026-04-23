@@ -5858,38 +5858,68 @@ async function fetchAPIShipments(){
       throw lastError||new Error('API request failed');
     };
 
-    let nextCursor=null;
-    let pageNum=0;
+    const parsedBaseUrl=new URL(normalizedBaseUrl,window.location.origin);
+    const delayParamRaw=String(parsedBaseUrl.searchParams.get('delay_days')||'').trim();
+    const startDelay=/^\d+$/.test(delayParamRaw)?parseInt(delayParamRaw,10):null;
     const MAX_PAGES=500; // safety limit for very large APIs
-    const seenCursors=new Set();
+    const MAX_DELAY_SWEEP=120; // collect delays up to this day when delay_days is provided
+    const EMPTY_DELAY_STOP=7;  // stop after N consecutive empty delay days
 
-    do{
-      pageNum++;
-      const cursorForPage=String(nextCursor||'').trim();
-      if(cursorForPage){
-        if(seenCursors.has(cursorForPage)){
-          console.warn(`Pagination stopped: repeated next_cursor detected (${cursorForPage}).`);
+    const appendUniqueItems=(items)=>{
+      let added=0;
+      for(const item of items){
+        const code=pickTrackingCode(item,added);
+        if(code&&!seen.has(code)){seen.add(code);rawData.push(item);added++;}
+      }
+      return added;
+    };
+
+    const fetchAllPagesForBase=async(baseUrl,label)=>{
+      let nextCursor=null;
+      let pageNum=0;
+      const seenCursors=new Set();
+      let dayRawCount=0;
+      do{
+        pageNum++;
+        const cursorForPage=String(nextCursor||'').trim();
+        if(cursorForPage){
+          if(seenCursors.has(cursorForPage)){
+            console.warn(`Pagination stopped (${label}): repeated next_cursor (${cursorForPage}).`);
+            break;
+          }
+          seenCursors.add(cursorForPage);
+        }
+        if(el)el.textContent=`⏳ ${label} — صفحة ${pageNum}... [${rawData.length} طرد]`;
+
+        const pageResult=await fetchPageWithRetry(baseUrl,cursorForPage,2);
+        const json=pageResult.json;
+        const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+        nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
+        dayRawCount+=pageData.length;
+        const newCount=appendUniqueItems(pageData);
+        console.log(`${label} | Page ${pageNum}: ${pageData.length} items, ${newCount} new, total: ${rawData.length}, next_cursor: ${nextCursor?'yes':'no'}, via: ${pageResult.mode}`);
+
+        if(!pageData.length)break;
+      }while(nextCursor&&pageNum<MAX_PAGES);
+      return dayRawCount;
+    };
+
+    if(startDelay!==null){
+      let emptyStreak=0;
+      for(let day=startDelay;day<=MAX_DELAY_SWEEP;day++){
+        const dayUrl=new URL(parsedBaseUrl.toString());
+        dayUrl.searchParams.set('delay_days',String(day));
+        const rawCountForDay=await fetchAllPagesForBase(dayUrl.toString(),`delay_days=${day}`);
+        if(rawCountForDay===0)emptyStreak++;
+        else emptyStreak=0;
+        if(emptyStreak>=EMPTY_DELAY_STOP){
+          console.log(`Delay sweep stopped after ${EMPTY_DELAY_STOP} empty days in a row (last delay=${day}).`);
           break;
         }
-        seenCursors.add(cursorForPage);
       }
-      if(el)el.textContent=`⏳ جلب الصفحة ${pageNum}... [${rawData.length} طرد حتى الآن]`;
-
-      const pageResult=await fetchPageWithRetry(normalizedBaseUrl,cursorForPage,2);
-      const json=pageResult.json;
-
-      const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
-      nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
-
-      let newCount=0;
-      for(const item of pageData){
-        const code=pickTrackingCode(item,newCount);
-        if(code&&!seen.has(code)){seen.add(code);rawData.push(item);newCount++;}
-      }
-      console.log(`Page ${pageNum}: ${pageData.length} items, ${newCount} new, total: ${rawData.length}, next_cursor: ${nextCursor?'yes':'no'}, via: ${pageResult.mode}`);
-
-      if(!pageData.length)break;
-    }while(nextCursor&&pageNum<MAX_PAGES);
+    }else{
+      await fetchAllPagesForBase(parsedBaseUrl.toString(),'api');
+    }
 
     if(!rawData.length){
       if(el)el.textContent='⚠️ لا بيانات في رد API';
