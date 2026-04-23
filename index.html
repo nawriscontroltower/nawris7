@@ -2454,10 +2454,26 @@ async function loadTransfers(){
 // CLASSIFY & BADGES
 // ══════════════════════════════════════════
 function cls(d,status=''){
-  const st=String(status||'').trim().toLowerCase();
+  const rawStatus=String(status||'').trim().toLowerCase();
+  const statusMap={
+    'مع المندوب':'with_driver',
+    'في الشركة':'in_company',
+    'مؤجلة مع المندوب':'delayed',
+    'متأخر':'delayed',
+    'مُسلَّم':'delivered',
+    'مسلم':'delivered',
+    'مرتجع':'returned',
+    'محوّل':'transferred'
+  };
+  const st=statusMap[rawStatus]||rawStatus;
   const tracked=st===''||st==='with_driver'||st==='in_company'||st==='delayed';
   if(!tracked)return 'ok';
-  return d>CFG.critDays?'critical':d>CFG.warnDays?'warning':'ok';
+  const daysTxt=toAsciiDigits(d).replace(/[^0-9.\-]/g,'');
+  const days=Number(daysTxt);
+  const safeDays=Number.isFinite(days)?days:0;
+  const crit=Number(CFG.critDays)||0;
+  const warn=Number(CFG.warnDays)||0;
+  return safeDays>=crit?'critical':safeDays>=warn?'warning':'ok';
 }
 function dBadge(d,status=''){
   const c=cls(d,status);
@@ -3097,6 +3113,14 @@ function setShipSort(key){
 }
 
 function renderShipments(){
+  const shipDelayClass=(d)=>{
+    const daysTxt=toAsciiDigits(d).replace(/[^0-9.\-]/g,'');
+    const days=Number(daysTxt);
+    const safeDays=Number.isFinite(days)?days:0;
+    const crit=Number(CFG.critDays)||0;
+    const warn=Number(CFG.warnDays)||0;
+    return safeDays>=crit?'critical':safeDays>=warn?'warning':'ok';
+  };
   const q=(document.getElementById('s-q')?.value||'').toLowerCase();
   const fd=document.getElementById('s-fd')?.value||'';
   const fst=document.getElementById('s-fst')?.value||'';
@@ -3117,13 +3141,13 @@ function renderShipments(){
   document.getElementById('sn-driver').textContent=list.filter(s=>s.status==='with_driver').length;
   document.getElementById('sn-wait').textContent=list.filter(s=>!contacted.has(String(s.id))).length;
   document.getElementById('sn-comp').textContent=list.filter(s=>s.status==='in_company').length;
-  document.getElementById('sn-late').textContent=list.filter(s=>cls(s.delay_days)!=='ok').length;
+  document.getElementById('sn-late').textContent=list.filter(s=>shipDelayClass(s.delay_days)!=='ok').length;
   if(seg==='driver') list=list.filter(s=>s.status==='with_driver');
   else if(seg==='wait') list=list.filter(s=>!contacted.has(String(s.id)));
   else if(seg==='company') list=list.filter(s=>s.status==='in_company');
-  else if(seg==='late') list=list.filter(s=>cls(s.delay_days)!=='ok');
+  else if(seg==='late') list=list.filter(s=>shipDelayClass(s.delay_days)!=='ok');
   list=list.filter(s=>{
-    if(fd&&cls(s.delay_days)!==fd)return false;
+    if(fd&&shipDelayClass(s.delay_days)!==fd)return false;
     if(fst&&s.status!==fst)return false;
     if(fb&&getCB(s)!==fb)return false;
     if(frb&&getRB(s)!==frb)return false;
@@ -3209,7 +3233,7 @@ function renderShipments(){
     const drvPhone=drv.phone||s.driver_phone||'';
     const brn=branches.find(b=>b.id===s.current_branch_id || b.name===s.branch_name)||{};
     const respBranch=s.responsible_branch||localStorage.getItem('rb_'+s.id)||localStorage.getItem('rb_'+s.tracking_code)||'';
-    return`<tr class="pr" data-sid="${sid}" style="${cls(s.delay_days)==='critical'?'background:rgba(255,58,92,.04)':''}">
+    return`<tr class="pr" data-sid="${sid}" style="${shipDelayClass(s.delay_days)==='critical'?'background:rgba(255,58,92,.04)':''}">
       <td onclick="event.stopPropagation()"><input type="checkbox" data-sid="${sid}" ${checked.has(String(s.id))?'checked':''} onchange="this.checked?checked.add(this.dataset.sid):checked.delete(this.dataset.sid)"></td>
       <td style="color:var(--dim);font-size:10px;text-align:center">${(sPage-1)*PER+idx+1}</td>
       <td class="code-cell">${backofficeOrderLinkHtml(s.tracking_code)}</td>
