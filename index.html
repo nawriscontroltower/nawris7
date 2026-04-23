@@ -2937,8 +2937,10 @@ function resetAllFilters(){
 function refreshAll(){updateKPIs();renderHome();renderShipments();renderDrivers();renderWA();}
 
 function updateKPIs(){
+  const hasApi=(apiShipments?.length||0)>0;
   const hasLocal=(shipments?.length||0)>0;
-  const mergedSource=hasLocal?shipments:apiShipments;
+  // Unified home KPIs: prefer API whenever it exists.
+  const mergedSource=hasApi?apiShipments:shipments;
   const crit=mergedSource.filter(s=>cls(s.delay_days)==='critical').length;
   const warn=mergedSource.filter(s=>cls(s.delay_days)==='warning').length;
   const ok=mergedSource.filter(s=>cls(s.delay_days)==='ok').length;
@@ -2964,7 +2966,8 @@ function updateKPIs(){
   if(hak('h-ak-comp'))hak('h-ak-comp').textContent=akComp;
   if(hak('h-ak-badge'))hak('h-ak-badge').textContent=apiShipments.length;
   const homeApiSummary=document.getElementById('home-api-summary');
-  if(homeApiSummary)homeApiSummary.style.display=hasLocal?'block':'none';
+  // Hide duplicated API summary when API is already used as primary KPI source.
+  if(homeApiSummary)homeApiSummary.style.display=hasApi?'none':(hasLocal?'block':'none');
   // Hero counts: combine both sources
   const allTotal=shipments.length+apiShipments.length;
   const ud=[...new Set([...shipments.map(s=>s.driver_name),...apiShipments.map(s=>s.captain)].filter(Boolean))];
@@ -2977,7 +2980,7 @@ function updateKPIs(){
   document.getElementById('h-ct').textContent=contacted.size;
   document.getElementById('h-tc').textContent=tc;
   const ab=document.getElementById('alert-banner');
-  const totalCrit=hasLocal?(crit+akCrit):crit;
+  const totalCrit=hasApi?crit:(crit+akCrit);
   if(totalCrit>0){ab.style.display='flex';document.getElementById('alert-title').textContent=`${totalCrit} طرد في خطر حرج (+${CFG.critDays} يوم)!`;}
   else ab.style.display='none';
   // Update sparklines with real data
