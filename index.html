@@ -5808,8 +5808,25 @@ async function fetchAPIShipments(){
       for(let attempt=0;attempt<=retries;attempt++){
         for(const mode of requestModes){
           const res=await apiFetch(mode.url,token,mode.cursor);
-          if(res.ok)return res;
-          lastError=new Error(`HTTP ${res.status} (${mode.label})`);
+          if(!res.ok){
+            lastError=new Error(`HTTP ${res.status} (${mode.label})`);
+            continue;
+          }
+          let json=null;
+          try{
+            json=await res.json();
+          }catch(_){
+            lastError=new Error(`Invalid JSON (${mode.label})`);
+            continue;
+          }
+          const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
+          const responseCursor=String(json?.meta?.next_cursor||json?.next_cursor||'').trim();
+          // If cursor doesn't advance, this mode likely returned the wrong page.
+          if(cursorStr&&pageData.length>0&&responseCursor!==''&&responseCursor===cursorStr){
+            lastError=new Error(`Cursor loop detected (${mode.label})`);
+            continue;
+          }
+          return {json,mode:mode.label};
         }
         if(attempt<retries){
           await new Promise(resolve=>setTimeout(resolve,350*(attempt+1)));
@@ -5835,8 +5852,8 @@ async function fetchAPIShipments(){
       }
       if(el)el.textContent=`⏳ جلب الصفحة ${pageNum}... [${rawData.length} طرد حتى الآن]`;
 
-      const res=await fetchPageWithRetry(normalizedBaseUrl,cursorForPage,2);
-      const json=await res.json();
+      const pageResult=await fetchPageWithRetry(normalizedBaseUrl,cursorForPage,2);
+      const json=pageResult.json;
 
       const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
       nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
@@ -5846,7 +5863,7 @@ async function fetchAPIShipments(){
         const code=pickTrackingCode(item,newCount);
         if(code&&!seen.has(code)){seen.add(code);rawData.push(item);newCount++;}
       }
-      console.log(`Page ${pageNum}: ${pageData.length} items, ${newCount} new, total: ${rawData.length}, next_cursor: ${nextCursor?'yes':'no'}`);
+      console.log(`Page ${pageNum}: ${pageData.length} items, ${newCount} new, total: ${rawData.length}, next_cursor: ${nextCursor?'yes':'no'}, via: ${pageResult.mode}`);
 
       if(!pageData.length)break;
     }while(nextCursor&&pageNum<MAX_PAGES);
