@@ -4630,7 +4630,7 @@ async function apiFetch(baseUrl,token,cursor){
     try{
       const u=new URL(reqUrl,window.location.origin);
       if(cursor)u.searchParams.set('cursor',String(cursor));
-      return await fetch(u.toString(),{
+      const directRes=await fetch(u.toString(),{
         method:'GET',
         headers:{
           'Accept':'application/json',
@@ -4638,6 +4638,9 @@ async function apiFetch(baseUrl,token,cursor){
         },
         credentials:'omit'
       });
+      // Some environments reject direct calls; fallback to proxy for resiliency.
+      if(directRes.ok)return directRes;
+      if(directRes.status!==401)return directRes;
     }catch(_){}
   }
   const body={url:reqUrl,token:cleanToken};
@@ -5846,6 +5849,15 @@ async function fetchAPIShipments(){
     toast('أدخل رابط API أولاً (من هنا أو من تبويب رفع البيانات)','e');
     return;
   }
+  // Normalize Algoriza URL if user enters only domain/root.
+  try{
+    if(url.includes('backoffice.nawris.algoriza.com')){
+      const u=new URL(url,window.location.origin);
+      const hasEndpoint=/\/external-api\/orders\/delayed/i.test(u.pathname);
+      if(!hasEndpoint)u.pathname='/external-api/orders/delayed';
+      url=u.toString();
+    }
+  }catch(_){}
 
   // Sync URL/token to both inputs
   const u2=document.getElementById('api-url2');if(u2&&!u2.value)u2.value=url;
@@ -5903,8 +5915,7 @@ async function fetchAPIShipments(){
       const requestModes=cursorStr
         ? [
             {url:baseUrl,cursor:cursorStr,label:'payload-cursor'},
-            {url:withCursorInQuery,cursor:'',label:'query-cursor'},
-            {url:withCursorInQuery,cursor:cursorStr,label:'payload+query-cursor'}
+            {url:withCursorInQuery,cursor:'',label:'query-cursor'}
           ]
         : [{url:baseUrl,cursor:'',label:'first-page'}];
       let lastError=null;
@@ -5940,7 +5951,9 @@ async function fetchAPIShipments(){
 
     const parsedBaseUrl=new URL(normalizedBaseUrl,window.location.origin);
     const delayParamRaw=String(parsedBaseUrl.searchParams.get('delay_days')||'').trim();
-    const startDelay=/^\d+$/.test(delayParamRaw)?parseInt(delayParamRaw,10):null;
+    const parsedDelay=/^\d+$/.test(delayParamRaw)?parseInt(delayParamRaw,10):null;
+    // API shipments delay must start from day 2 minimum.
+    const startDelay=parsedDelay===null?2:Math.max(2,parsedDelay);
     const MAX_PAGES=500; // safety limit for very large APIs
     const MAX_DELAY_SWEEP=120; // collect delays up to this day when delay_days is provided
     const EMPTY_DELAY_STOP=7;  // stop after N consecutive empty delay days
@@ -5971,7 +5984,17 @@ async function fetchAPIShipments(){
         }
         if(el)el.textContent=`⏳ ${label} — صفحة ${pageNum}... [${rawData.length} طرد]`;
 
-        const pageResult=await fetchPageWithRetry(baseUrl,cursorForPage,2);
+        let pageResult=null;
+        try{
+          pageResult=await fetchPageWithRetry(baseUrl,cursorForPage,2);
+        }catch(fetchErr){
+          // Don't fully block users if later pages fail (e.g. unstable cursor modes / server 500).
+          if(rawData.length>0){
+            console.warn(`Pagination warning (${label}): stopped at page ${pageNum} due to ${fetchErr?.message||fetchErr}`);
+            break;
+          }
+          throw fetchErr;
+        }
         const json=pageResult.json;
         const pageData=Array.isArray(json)?json:json?.data||json?.results||json?.orders||json?.shipments||[];
         nextCursor=json?.meta?.next_cursor||json?.next_cursor||null;
