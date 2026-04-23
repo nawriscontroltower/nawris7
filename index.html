@@ -618,10 +618,14 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.6;width:100%}
 
 /* ── TRANSFERS TRIP TABLE ── */
 .tr-wrap{border:1px solid var(--rim2);border-radius:var(--r);overflow:hidden;background:var(--bg2)}
-.tr-head{display:grid;grid-template-columns:minmax(150px,1.2fr) 90px 120px 140px;gap:8px;padding:10px 14px;background:var(--bg4);border-bottom:1px solid var(--rim2);font-size:var(--fs-xs);color:var(--dim);font-weight:800}
-.trip-row{display:grid;grid-template-columns:minmax(150px,1.2fr) 90px 120px 140px;gap:8px;padding:11px 14px;border-bottom:1px solid var(--rim);align-items:center;cursor:pointer;transition:background .15s ease}
+.tr-head{display:grid;grid-template-columns:minmax(200px,1.4fr) 90px 120px;gap:8px;padding:10px 14px;background:var(--bg4);border-bottom:1px solid var(--rim2);font-size:var(--fs-xs);color:var(--dim);font-weight:800}
+.trip-row{display:grid;grid-template-columns:minmax(200px,1.4fr) 90px 120px;gap:8px;padding:11px 14px;border-bottom:1px solid var(--rim);align-items:start;cursor:pointer;transition:background .15s ease}
+.trip-row > div:nth-child(2),.trip-row > div:nth-child(3){align-self:center}
 .trip-row:hover{background:rgba(2,132,199,.06)}
-.trip-id-cell{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--pale)}
+.trip-id-cell{display:flex;align-items:flex-start;gap:10px;font-weight:700;color:var(--pale)}
+.trip-route-stack{flex:1;display:flex;flex-direction:column;gap:5px;text-align:right;line-height:1.35;min-width:0}
+.trip-route-line{font-size:var(--fs-xs);color:var(--dim);word-break:break-word}
+.trip-route-line b{color:var(--pale);font-weight:800;margin-inline-start:6px}
 .trip-toggle{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--bg5);color:var(--mute);font-size:11px;transition:transform .2s ease}
 .trip-row.open .trip-toggle{transform:rotate(90deg)}
 .trip-children{display:none;background:var(--bg3)}
@@ -1103,7 +1107,6 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <div>الرحلة</div>
         <div>العدد</div>
         <div>الحالة</div>
-        <div>آخر تحديث</div>
       </div>
       <div id="transfers-table" aria-live="polite">
         <div class="tr-empty">لا تحويلات</div>
@@ -3840,7 +3843,6 @@ function renderTransfers(){
   if(!container)return;
   const statusFilter=(document.getElementById('t-st')?.value||'').toLowerCase();
   const frag=document.createDocumentFragment();
-  const autoExpandAll=transferExpandedTrips.size===0;
   let renderedTrips=0;
 
   transferTripOrder.forEach(tripId=>{
@@ -3857,7 +3859,6 @@ function renderTransfers(){
     if(!filtered.length)return;
     renderedTrips++;
 
-    const latest=filtered[0]?.created_at||'';
     const primary=getTransferStatusMeta(filtered[0]?.status);
 
     const tripRow=document.createElement('div');
@@ -3866,17 +3867,41 @@ function renderTransfers(){
     const firstRow=filtered[0]||{};
     const fromLabel=String(firstRow.from_branch||'—').trim()||'—';
     const toLabel=String(firstRow.to_branch||'—').trim()||'—';
-    const delayLabel=Number.isFinite(Number(firstRow.delay_days))?`${Number(firstRow.delay_days)}ي`:'—';
-    const dateLabel=transferDateKey(firstRow.created_at);
+    const delayNum=Number(firstRow.delay_days);
+    const delayLine=Number.isFinite(delayNum)?`${delayNum} يوم`:'—';
 
     const tripCell=document.createElement('div');
     tripCell.className='trip-id-cell';
     const arrow=document.createElement('span');
     arrow.className='trip-toggle';
     arrow.textContent='▸';
-    const tripLabel=document.createElement('span');
-    tripLabel.textContent=`${fromLabel} → ${toLabel} • ${delayLabel} • ${dateLabel}`;
-    tripCell.append(arrow,tripLabel);
+    const stack=document.createElement('div');
+    stack.className='trip-route-stack';
+    const lineFrom=document.createElement('div');
+    lineFrom.className='trip-route-line';
+    const lfSpan=document.createElement('span');
+    lfSpan.textContent='فرع المرسل';
+    const lfBold=document.createElement('b');
+    lfBold.dir='auto';
+    lfBold.textContent=fromLabel;
+    lineFrom.append(lfSpan,lfBold);
+    const lineTo=document.createElement('div');
+    lineTo.className='trip-route-line';
+    const ltSpan=document.createElement('span');
+    ltSpan.textContent='فرع المستلم';
+    const ltBold=document.createElement('b');
+    ltBold.dir='auto';
+    ltBold.textContent=toLabel;
+    lineTo.append(ltSpan,ltBold);
+    const lineDelay=document.createElement('div');
+    lineDelay.className='trip-route-line';
+    const ldSpan=document.createElement('span');
+    ldSpan.textContent='عدد الأيام';
+    const ldBold=document.createElement('b');
+    ldBold.textContent=delayLine;
+    lineDelay.append(ldSpan,ldBold);
+    stack.append(lineFrom,lineTo,lineDelay);
+    tripCell.append(arrow,stack);
 
     const countCell=document.createElement('div');
     countCell.textContent=String(filtered.length);
@@ -3885,17 +3910,13 @@ function renderTransfers(){
     statusCell.className=`status-dot ${primary.tone}`;
     statusCell.textContent=primary.label;
 
-    const dateCell=document.createElement('div');
-    dateCell.textContent=latest?new Date(latest).toLocaleDateString('ar-LY'):'—';
-
-    tripRow.append(tripCell,countCell,statusCell,dateCell);
+    tripRow.append(tripCell,countCell,statusCell);
     tripRow.addEventListener('click',()=>toggleTrip(tripId));
 
     const children=createTripChildren(tripId,filtered);
-    if(autoExpandAll||transferExpandedTrips.has(String(tripId))){
+    if(transferExpandedTrips.has(String(tripId))){
       tripRow.classList.add('open');
       children.classList.add('open');
-      transferExpandedTrips.add(String(tripId));
     }
 
     frag.appendChild(tripRow);
