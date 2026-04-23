@@ -832,14 +832,14 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
     </div>
 
     <!-- API Shipments Summary -->
-    <div style="margin-bottom:24px">
+    <div id="home-api-summary" style="margin-bottom:24px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
         <div style="display:flex;align-items:center;gap:10px">
           <div style="width:5px;height:26px;border-radius:3px;background:linear-gradient(180deg,var(--pur),var(--blu))"></div>
           <div class="crm-section-head">ملخص طرود API</div>
           <span class="crm-api-badge" style="background:var(--prd);color:var(--pur);border-radius:99px;border:1px solid var(--prb);font-family:var(--mono)" id="h-ak-badge">0</span>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="gTab('api-shipments')" style="gap:5px">
+        <button class="btn btn-ghost btn-sm" onclick="goAPIShipments('','')" style="gap:5px">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           عرض الكل
         </button>
@@ -2923,12 +2923,14 @@ function resetAllFilters(){
 function refreshAll(){updateKPIs();renderHome();renderShipments();renderDrivers();renderWA();}
 
 function updateKPIs(){
-  const crit=shipments.filter(s=>cls(s.delay_days)==='critical').length;
-  const warn=shipments.filter(s=>cls(s.delay_days)==='warning').length;
-  const ok=shipments.filter(s=>cls(s.delay_days)==='ok').length;
-  const comp=shipments.filter(s=>s.status==='in_company').length;
-  const ret=shipments.filter(s=>s.status==='returned').length;
-  document.getElementById('k-total').textContent=shipments.length;
+  const hasLocal=(shipments?.length||0)>0;
+  const mergedSource=hasLocal?shipments:apiShipments;
+  const crit=mergedSource.filter(s=>cls(s.delay_days)==='critical').length;
+  const warn=mergedSource.filter(s=>cls(s.delay_days)==='warning').length;
+  const ok=mergedSource.filter(s=>cls(s.delay_days)==='ok').length;
+  const comp=mergedSource.filter(s=>s.status==='in_company').length;
+  const ret=mergedSource.filter(s=>s.status==='returned').length;
+  document.getElementById('k-total').textContent=mergedSource.length;
   document.getElementById('k-crit').textContent=crit;
   document.getElementById('k-warn').textContent=warn;
   document.getElementById('k-ok').textContent=ok;
@@ -2947,6 +2949,8 @@ function updateKPIs(){
   if(hak('h-ak-driver'))hak('h-ak-driver').textContent=akDrv;
   if(hak('h-ak-comp'))hak('h-ak-comp').textContent=akComp;
   if(hak('h-ak-badge'))hak('h-ak-badge').textContent=apiShipments.length;
+  const homeApiSummary=document.getElementById('home-api-summary');
+  if(homeApiSummary)homeApiSummary.style.display=hasLocal?'block':'none';
   // Hero counts: combine both sources
   const allTotal=shipments.length+apiShipments.length;
   const ud=[...new Set([...shipments.map(s=>s.driver_name),...apiShipments.map(s=>s.captain)].filter(Boolean))];
@@ -2959,11 +2963,11 @@ function updateKPIs(){
   document.getElementById('h-ct').textContent=contacted.size;
   document.getElementById('h-tc').textContent=tc;
   const ab=document.getElementById('alert-banner');
-  const totalCrit=crit+akCrit;
+  const totalCrit=hasLocal?(crit+akCrit):crit;
   if(totalCrit>0){ab.style.display='flex';document.getElementById('alert-title').textContent=`${totalCrit} طرد في خطر حرج (+${CFG.critDays} يوم)!`;}
   else ab.style.display='none';
   // Update sparklines with real data
-  renderKPISparklines({total:shipments.length,crit,warn,ok,comp,ret});
+  renderKPISparklines({total:mergedSource.length,crit,warn,ok,comp,ret});
 }
 
 /* Render sparklines dynamically based on real count (simulate a 7-point trend) */
@@ -4488,6 +4492,11 @@ document.getElementById('nav-tabs').addEventListener('click',e=>{
 
 // ── Navigate to shipments tab with filter ──
 function goShipments(filterType, filterVal){
+  // In unified mode, if local source is empty and API has data, route to API panel.
+  if((shipments?.length||0)===0 && (apiShipments?.length||0)>0){
+    goAPIShipments(filterType, filterVal);
+    return;
+  }
   gTab('shipments');
   const delayEl=document.getElementById('s-fd');
   const statusEl=document.getElementById('s-fst');
