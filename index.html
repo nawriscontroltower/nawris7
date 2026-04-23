@@ -5959,8 +5959,6 @@ async function fetchAPIShipments(){
     // API shipments delay must start from day 2 minimum.
     const startDelay=parsedDelay===null?2:Math.max(2,parsedDelay);
     const MAX_PAGES=500; // safety limit for very large APIs
-    const MAX_DELAY_SWEEP=120; // collect delays up to this day when delay_days is provided
-    const EMPTY_DELAY_STOP=7;  // stop after N consecutive empty delay days
 
     const appendUniqueItems=(items)=>{
       let added=0;
@@ -6011,22 +6009,11 @@ async function fetchAPIShipments(){
       return dayRawCount;
     };
 
-    if(startDelay!==null){
-      let emptyStreak=0;
-      for(let day=startDelay;day<=MAX_DELAY_SWEEP;day++){
-        const dayUrl=new URL(parsedBaseUrl.toString());
-        dayUrl.searchParams.set('delay_days',String(day));
-        const rawCountForDay=await fetchAllPagesForBase(dayUrl.toString(),`delay_days=${day}`);
-        if(rawCountForDay===0)emptyStreak++;
-        else emptyStreak=0;
-        if(emptyStreak>=EMPTY_DELAY_STOP){
-          console.log(`Delay sweep stopped after ${EMPTY_DELAY_STOP} empty days in a row (last delay=${day}).`);
-          break;
-        }
-      }
-    }else{
-      await fetchAllPagesForBase(parsedBaseUrl.toString(),'api');
-    }
+    // Performance: fetch a single delayed stream (delay_days >= startDelay on this API),
+    // then paginate cursors only. Avoid day-by-day sweep that causes long blocking.
+    const effectiveUrl=new URL(parsedBaseUrl.toString());
+    effectiveUrl.searchParams.set('delay_days',String(startDelay));
+    await fetchAllPagesForBase(effectiveUrl.toString(),`delay_days>=${startDelay}`);
 
     if(!rawData.length){
       if(el)el.textContent='⚠️ لا بيانات في رد API';
