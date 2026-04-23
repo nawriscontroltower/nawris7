@@ -6587,30 +6587,63 @@ async function moveAPIToMain(s){
 // ── ENRICH CAPTAIN PHONES FROM DRIVERS DB ──
 function enrichAPICaptainPhones(){
   if(!apiShipments.length||!drivers_db.length)return;
-  // Build lookup maps: exact name, fuzzy name
+  const cleanCaptainName=(v)=>{
+    return normalizeIdentityText(v)
+      .replace(/[^0-9a-z\u0600-\u06ff\s]/gi,'')
+      .replace(/\s+/g,' ')
+      .trim();
+  };
+  const isPlaceholderCaptain=(v)=>{
+    const t=cleanCaptainName(v);
+    return !t
+      || t==='undefined'
+      || t==='null'
+      || t==='-'
+      || t==='—'
+      || t==='غير محدد'
+      || t==='لا يوجد';
+  };
+
+  // Build lookup maps with both raw and normalized names.
   const byName={};
-  drivers_db.forEach(d=>{if(d.name)byName[d.name.trim()]=d;});
+  const byNameNormalized={};
+  drivers_db.forEach(d=>{
+    if(!d?.name)return;
+    const rawName=String(d.name).trim();
+    if(!rawName)return;
+    byName[rawName]=d;
+    const normalizedName=cleanCaptainName(rawName);
+    if(normalizedName&&!byNameNormalized[normalizedName])byNameNormalized[normalizedName]=d;
+  });
 
   let matched=0,unmatched=[];
   apiShipments.forEach(s=>{
-    if(!s.captain||s.captain==='—'||s.captain==='undefined')return;
-    const cap=s.captain.trim();
+    if(isPlaceholderCaptain(s.captain))return;
+    const cap=String(s.captain||'').trim();
+    const capNorm=cleanCaptainName(cap);
+    if(!capNorm)return;
     // 1. Exact match
     let drv=byName[cap];
+    // 1.1 Exact normalized match
+    if(!drv)drv=byNameNormalized[capNorm];
     // 2. Fuzzy: API name contains DB name or vice versa
     if(!drv){
-      const dk=Object.keys(byName).find(k=>k.includes(cap)||cap.includes(k));
-      if(dk)drv=byName[dk];
+      const dk=Object.keys(byNameNormalized).find(k=>{
+        if(!k||k.length<3||capNorm.length<3)return false;
+        return k.includes(capNorm)||capNorm.includes(k);
+      });
+      if(dk)drv=byNameNormalized[dk];
     }
     // 3. Fuzzy: strip spaces, try first/last name
     if(!drv){
-      const capParts=cap.split(/\s+/);
+      const capParts=capNorm.split(/\s+/).filter(Boolean);
       if(capParts.length>=2){
-        const dk=Object.keys(byName).find(k=>{
-          const kParts=k.split(/\s+/);
+        const dk=Object.keys(byNameNormalized).find(k=>{
+          const kParts=String(k).split(/\s+/).filter(Boolean);
+          if(!kParts.length)return false;
           return capParts[0]===kParts[0] || capParts[capParts.length-1]===kParts[kParts.length-1];
         });
-        if(dk)drv=byName[dk];
+        if(dk)drv=byNameNormalized[dk];
       }
     }
     if(drv&&drv.phone){
