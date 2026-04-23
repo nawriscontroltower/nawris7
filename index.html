@@ -2625,7 +2625,12 @@ async function loadReturns(){
     const inCompanyRows=rows.filter(r=>{
       const d=parseInt(r?.delay_days||r?.delay||0)||0;
       const s=String(r?.status||'').toLowerCase();
-      return d>=MIN_COMPANY_DELAY&&(s.includes('in_company')||s.includes('company')||s.includes('في الشركة'));
+      return d>=MIN_COMPANY_DELAY&&(
+        s.includes('in_company')||
+        s.includes('company')||
+        s.includes('في الشركة')||
+        s.includes('بالشركة')
+      );
     });
     returns_data=inCompanyRows.map((r,i)=>({
       id:r.id||`cmp-${i}`,
@@ -2666,7 +2671,19 @@ async function loadTransfers(){
     const transferRows=apiRows.filter(r=>{
       const d=parseInt(r?.delay_days||r?.delay||0)||0;
       const s=String(r?.status||'').toLowerCase();
-      return d>=MIN_TRANSFER_DELAY&&(s.includes('transfer')||s.includes('transferred')||s.includes('تحويل')||s.includes('محول'));
+      const hasBranchTransferHint=Boolean(r?.previous_branch)||Boolean(r?.received_branch);
+      return d>=MIN_TRANSFER_DELAY&&(
+        s.includes('transfer')||
+        s.includes('transferred')||
+        s.includes('تحويل')||
+        s.includes('محول')||
+        s.includes('بالطريق')||
+        s.includes('بالطريق للفرع')||
+        s.includes('in_transit')||
+        s.includes('on_the_way')||
+        s.includes('with_driver')||
+        hasBranchTransferHint
+      );
     });
     transfers_data=transferRows.map((r,i)=>({
       id:r.id||`api-${r.shipment_code||Math.random().toString(16).slice(2)}`,
@@ -3707,6 +3724,7 @@ function getTransferStatusMeta(status){
   const s=String(status||'').toLowerCase();
   if(s.includes('deliver'))return {label:'تم التسليم',tone:'status-delivered'};
   if(s.includes('delay')||s.includes('late'))return {label:'متأخر',tone:'status-delayed'};
+  if(s.includes('بالطريق')||s.includes('in_transit')||s.includes('on_the_way'))return {label:'بالطريق',tone:'status-pending'};
   if(s.includes('pending')||s.includes('accept')||s.includes('reject'))return {label:'معلق',tone:'status-pending'};
   return {label:s||'غير محدد',tone:'status-default'};
 }
