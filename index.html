@@ -881,8 +881,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       </div>
     </div>
     <div class="segs" style="margin-bottom:12px">
-      <button id="ship-src-local" class="seg on" onclick="switchUnifiedShipmentsSource('local')">Local Shipments</button>
-      <button id="ship-src-api" class="seg" onclick="switchUnifiedShipmentsSource('api')">API Shipments</button>
+      <button id="ship-src-api" class="seg on" onclick="switchUnifiedShipmentsSource('api')">API Shipments</button>
     </div>
     <div id="shipments-api-loading" class="card" style="display:none;padding:14px;margin-bottom:12px">جارٍ تحميل طرود API...</div>
     <div id="shipments-local-panel">
@@ -2358,7 +2357,7 @@ async function startApp(){
   // Auto-sync API shipments after drivers are loaded
   setTimeout(autoSyncAPI,1500);
   loadCachedAPIShipments();
-  switchUnifiedShipmentsSource('local');
+  switchUnifiedShipmentsSource('api');
 }
 
 function removeDeprecatedTabs(){
@@ -2387,11 +2386,11 @@ async function switchUnifiedShipmentsSource(source){
   const localPanel=document.getElementById('shipments-local-panel');
   const apiPanel=document.getElementById('shipments-api-panel');
   const loading=document.getElementById('shipments-api-loading');
-  if(!localBtn||!apiBtn||!localPanel||!apiPanel)return;
+  if(!apiBtn||!apiPanel)return;
   const showApi=source==='api';
-  localBtn.classList.toggle('on',!showApi);
+  if(localBtn)localBtn.classList.toggle('on',!showApi);
   apiBtn.classList.toggle('on',showApi);
-  localPanel.style.display=showApi?'none':'block';
+  if(localPanel)localPanel.style.display=showApi?'none':'block';
   apiPanel.style.display=showApi?'block':'none';
   if(!showApi){
     renderShipments();
@@ -4430,7 +4429,7 @@ function gTab(id){
   if(window.innerWidth<=900)closeSidebar();
   const renders={
     home:renderHome,
-    shipments:()=>switchUnifiedShipmentsSource('local'),
+    shipments:()=>switchUnifiedShipmentsSource('api'),
     drivers:renderDrivers,
     returns:renderReturns,
     transfers:renderTransfers,
