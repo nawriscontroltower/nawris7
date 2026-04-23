@@ -5582,9 +5582,7 @@ async function fetchAPIShipments(){
     // API returns 100 items per page with next_cursor for pagination
     let rawData=[];
     const seen=new Set();
-    const baseUrl=url.replace(/[?&]delay_days=[^&]*/g,'').replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
-    const sep=baseUrl.includes('?')?'&':'?';
-    const startUrl=`${baseUrl}${sep}delay_days=2`;
+    const startUrl=url.replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
 
     let nextCursor=null;
     let pageNum=0;
