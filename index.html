@@ -1156,11 +1156,6 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       <div class="kcard orn" id="ak-card-comp"><div class="klbl" id="ak-lbl-comp">في الشركة</div><div class="kval" id="ak-comp">0</div></div>
     </div>
 
-    <!-- Segments -->
-    <div class="segs">
-      <div class="seg" data-aseg="driver">🚗 مع المندوب <span class="seg-n" id="asn-driver">0</span></div>
-    </div>
-
     <!-- Filters -->
     <div class="fbar">
       <button class="btn btn-ghost btn-sm" onclick="openApiFiltersDrawer()">⚙️ تصفية</button>
@@ -5346,7 +5341,7 @@ async function fetchAPIShipments(){
     const seen=new Set();
     const baseUrl=url.replace(/[?&]delay_days=[^&]*/g,'').replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
     const sep=baseUrl.includes('?')?'&':'?';
-    const startUrl=`${baseUrl}${sep}delay_days=1`;
+    const startUrl=`${baseUrl}${sep}delay_days=2`;
 
     let nextCursor=null;
     let pageNum=0;
