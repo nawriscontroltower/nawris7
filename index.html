@@ -5371,7 +5371,8 @@ async function fetchAPIShipments(){
     if(dot)dot.className='sync-dot';
     if(stEl)stEl.textContent='متصل — '+apiShipments.length+' طرد';
     document.getElementById('api-last-fetch').textContent='آخر جلب: '+new Date().toLocaleTimeString('ar-LY');
-    document.getElementById('tb-api').textContent=apiShipments.length;
+    const tbApiEl=document.getElementById('tb-api');
+    if(tbApiEl)tbApiEl.textContent=apiShipments.length;
 
     // In manual Excel only mode, API fetch does not write into main shipments table.
     if(!MANUAL_EXCEL_SHIPMENTS_ONLY){
@@ -5467,7 +5468,8 @@ function updateAPIKPIs(){
   document.getElementById('ak-ok').textContent=isEmployee?myReturned:ok;
   document.getElementById('ak-driver').textContent=isEmployee?myDrv:drv;
   document.getElementById('ak-comp').textContent=comp;
-  document.getElementById('tb-api').textContent=isEmployee?assignedOnly.length:apiShipments.length;
+  const tbApiEl2=document.getElementById('tb-api');
+  if(tbApiEl2)tbApiEl2.textContent=isEmployee?assignedOnly.length:apiShipments.length;
 
   const setTxt=(id,v)=>{const x=document.getElementById(id);if(x)x.textContent=v;};
   const setDisp=(id,v)=>{const x=document.getElementById(id);if(x)x.style.display=v;};
@@ -6520,7 +6522,8 @@ function loadCachedAPIShipments(){
         if(s.branch_commission===undefined)s.branch_commission=null;
       });
       enrichAPICaptainPhones();
-      document.getElementById('tb-api').textContent=apiShipments.length;
+      const tbApiEl3=document.getElementById('tb-api');
+      if(tbApiEl3)tbApiEl3.textContent=apiShipments.length;
       updateKPIs();
     }
     // loadAll() runs buildJanzourSet() before apiShipments is filled from cache — refresh subset now
