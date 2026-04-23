@@ -1185,6 +1185,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
             <option value="6">كل 6 ساعات</option>
           </select>
           <button class="btn btn-pur btn-sm" onclick="connectAPI2()">🔌 اتصال</button>
+          <button class="btn btn-ghost btn-sm" onclick="startFreshAPISync()">🧹 بدء جديد</button>
         </div>
       </div>
       <div id="api2-status" style="font-size:11px;color:var(--mute);margin-top:6px"></div>
@@ -5660,6 +5661,35 @@ function resetAPIFilters(){
   setAPISeg('all');
 }
 
+function clearAPIStateForFreshStart(showToastMsg=true){
+  apiShipments=[];
+  apiFetchLog=[];
+  apiChecked=new Set();
+  apiFilteredData=[];
+  apiFilteredIds=[];
+  apiLastSelectedSid='';
+  aPage=1;
+  try{
+    localStorage.removeItem('api_shipments');
+    localStorage.removeItem('api_fetch_log');
+    localStorage.removeItem('api_assignments');
+  }catch(_){}
+  resetAPIFilters();
+  renderAPIShipments();
+  updateAPIKPIs();
+  renderAPIFetchLog();
+  updateKPIs();
+  renderHome();
+  renderStaff();
+  if(showToastMsg)toast('🧹 تم مسح بيانات API المحلية. جاهز للجلب الجديد.','s');
+}
+
+async function startFreshAPISync(){
+  clearAPIStateForFreshStart(false);
+  toast('🧹 بدء جديد: جارٍ جلب كل الطرود من API...','i');
+  await fetchAPIShipments();
+}
+
 function setAPISeg(s){
   apiSeg=s;aPage=1;
   document.querySelectorAll('[data-aseg]').forEach(el=>el.classList.toggle('on',el.dataset.aseg===s));
@@ -5713,9 +5743,7 @@ async function fetchAPIShipments(){
     const normalizedBaseUrl=url.replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
     const buildPagedApiUrl=(cursorVal='')=>{
       const u=new URL(normalizedBaseUrl,window.location.origin);
-      // Respect delay_days from URL if provided; otherwise default to day-2+.
-      const delayParam=String(u.searchParams.get('delay_days')||'').trim();
-      if(!/^\d+$/.test(delayParam))u.searchParams.set('delay_days','2');
+      // Keep API URL/query exactly as provided by user (no forced filters).
       if(cursorVal)u.searchParams.set('cursor',String(cursorVal));
       else u.searchParams.delete('cursor');
       return u.toString();
