@@ -2876,7 +2876,10 @@ async function loadTransfers(){
 // ══════════════════════════════════════════
 // CLASSIFY & BADGES
 // ══════════════════════════════════════════
-function cls(d){return d>CFG.critDays?'critical':d>CFG.warnDays?'warning':'ok';}
+function cls(d){
+  const days=Number(d)||0;
+  return days>=CFG.critDays?'critical':days>=CFG.warnDays?'warning':'ok';
+}
 function dBadge(d){
   const c=cls(d);
   return c==='critical'?`<span class="dp-c">🔴 ${d}ي</span>`:
