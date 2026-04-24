@@ -6772,7 +6772,8 @@ function renderAPIShipments(){
   if(isEmployee){
     list=list.filter(s=>String(assignments[s.tracking_code]||'')===String(myName));
   }
-  if(!showProcessed){
+  const forceShowProcessedForStatus=(fst==='returned'||fst==='delivered');
+  if(!showProcessed&&!forceShowProcessedForStatus){
     list=list.filter(s=>!apiProcessedCodes.has(String(s.tracking_code||'')));
   }
 
