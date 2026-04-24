@@ -672,6 +672,8 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.6;width:100%}
   .branch-kpis{grid-template-columns:repeat(2,minmax(120px,1fr))}
   .branch-row{grid-template-columns:1fr 1fr}
 }
+.staff-pane{display:none}
+.staff-pane.on{display:block}
 
 /* ── WA TEMPLATE ── */
 .tpl-card{background:var(--bg4);border:1px solid var(--rim);border-radius:var(--r2);padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .2s}
@@ -782,7 +784,13 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       <div class="sb-section manager-only">الإدارة</div>
       <div class="sb-item manager-only" data-tab="users"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> المستخدمون</div>
       <div class="sb-item manager-only" data-tab="reports"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> التقارير</div>
-      <div class="sb-item manager-only" data-tab="staff"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> متابعة الموظفين</div>
+      <div class="sb-item manager-only" data-tab="staff" data-menu-toggle="staff"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> متابعة الموظفين <span class="sb-caret">▾</span></div>
+      <div class="sb-submenu manager-only" data-menu="staff">
+        <div class="sb-subitem" data-staff-menu="complete">جدول الطرود التامة</div>
+        <div class="sb-subitem" data-staff-menu="performance">أداء الموظفين</div>
+        <div class="sb-subitem" data-staff-menu="summary">ملخص نتائج التواصل</div>
+        <div class="sb-subitem" data-staff-menu="captains">أداء المناديب</div>
+      </div>
       <div class="sb-item manager-only" data-tab="commission-admin"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> عمولات جنزور</div>
       <div class="sb-item manager-only" data-tab="master" data-menu-toggle="database"><span class="sb-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> database <span class="sb-caret">▾</span></div>
       <div class="sb-submenu manager-only" data-menu="database">
@@ -1672,6 +1680,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <button class="btn btn-red btn-sm" onclick="clearAllContactResults()">🗑️ حذف كل بيانات التتبع</button>
       </div>
     </div>
+    <div class="staff-pane" data-staff-pane="complete">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:16px" id="staff-kpis"></div>
 
     <!-- ══ COMPLETE SHIPMENTS TABLE — Primary View ══ -->
@@ -1729,8 +1738,9 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <div class="pgn" id="sf-pgn"></div>
       </div>
     </div>
+    </div>
 
-    <div class="card">
+    <div class="card staff-pane" data-staff-pane="performance">
       <div class="ctitle">📋 أداء الموظفين اليوم</div>
       <div class="tw">
         <table>
@@ -1739,11 +1749,12 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         </table>
       </div>
     </div>
-    <div class="card" style="margin-top:12px">
+    <div class="card staff-pane" style="margin-top:12px" data-staff-pane="summary">
       <div class="ctitle">📊 ملخص نتائج التواصل لكل الطرود</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px" id="staff-cr-summary"></div>
     </div>
     <!-- API Captains Performance -->
+    <div class="staff-pane" data-staff-pane="captains">
     <div class="card" style="margin-top:12px;border-right:3px solid var(--pur)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div class="ctitle" style="margin-bottom:0">🔗 أداء المناديب — طرود API</div>
@@ -1758,6 +1769,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <button class="btn btn-ghost btn-sm" onclick="gTab('api-shipments');setTimeout(openAssignPanel,200)">⚙️ إدارة التوزيع</button>
       </div>
       <div id="staff-assign-stats"></div>
+    </div>
     </div>
 
   </div>
@@ -2274,6 +2286,8 @@ let seg='all', sPage=1, masterSeg='regions', meTable='', meRecord=null, alphaFil
 let shipmentsMenuOpen=false;
 let branchesMenuOpen=false;
 let databaseMenuOpen=false;
+let staffMenuOpen=false;
+let staffSection='performance';
 let PER=25;
 let sSortKey='delay_days';
 let sSortDir='desc';
@@ -5118,6 +5132,14 @@ function gTab(id){
   }else{
     document.querySelectorAll('#nav-tabs .sb-subitem[data-db-menu]').forEach(el=>el.classList.remove('on'));
   }
+
+  // Keep staff submenu state in sync with active page.
+  if(id==='staff'){
+    setStaffMenuOpen(true);
+    setStaffSection(staffSection||'performance');
+  }else{
+    document.querySelectorAll('#nav-tabs .sb-subitem[data-staff-menu]').forEach(el=>el.classList.remove('on'));
+  }
 }
 
 function setShipmentsMenuOpen(open){
@@ -5142,6 +5164,22 @@ function setDatabaseMenuOpen(open){
   if(item)item.classList.toggle('open',databaseMenuOpen);
   if(menu)menu.style.display=databaseMenuOpen?'block':'none';
 }
+function setStaffMenuOpen(open){
+  staffMenuOpen=!!open;
+  const item=document.querySelector('#nav-tabs .sb-item[data-menu-toggle="staff"]');
+  const menu=document.querySelector('#nav-tabs .sb-submenu[data-menu="staff"]');
+  if(item)item.classList.toggle('open',staffMenuOpen);
+  if(menu)menu.style.display=staffMenuOpen?'block':'none';
+}
+function setStaffSection(section){
+  staffSection=section||'performance';
+  document.querySelectorAll('[data-staff-pane]').forEach(el=>{
+    el.classList.toggle('on',el.dataset.staffPane===staffSection);
+  });
+  document.querySelectorAll('#nav-tabs .sb-subitem[data-staff-menu]').forEach(el=>{
+    el.classList.toggle('on',el.dataset.staffMenu===staffSection);
+  });
+}
 
 function openBranchesMenuSection(section){
   if(section==='transfers'){
@@ -5152,6 +5190,10 @@ function openBranchesMenuSection(section){
 }
 function openDatabaseMenuSection(section){
   gTab(section==='upload'?'upload':'master');
+}
+function openStaffMenuSection(section){
+  setStaffSection(section||'performance');
+  gTab('staff');
 }
 
 function openShipmentsMenuFilter(status){
@@ -5199,6 +5241,11 @@ document.getElementById('nav-tabs').addEventListener('click',e=>{
     openDatabaseMenuSection(dbSub.dataset.dbMenu||'master');
     return;
   }
+  const staffSub=e.target.closest('.sb-subitem[data-staff-menu]');
+  if(staffSub){
+    openStaffMenuSection(staffSub.dataset.staffMenu||'performance');
+    return;
+  }
   const menuToggle=e.target.closest('.sb-item[data-menu-toggle]');
   if(menuToggle&&menuToggle.dataset.menuToggle==='shipments'){
     setShipmentsMenuOpen(!shipmentsMenuOpen);
@@ -5223,6 +5270,15 @@ document.getElementById('nav-tabs').addEventListener('click',e=>{
     }
     return;
   }
+  if(menuToggle&&menuToggle.dataset.menuToggle==='staff'){
+    setStaffMenuOpen(!staffMenuOpen);
+    if(!staffMenuOpen){
+      document.querySelectorAll('#nav-tabs .sb-subitem[data-staff-menu]').forEach(el=>el.classList.remove('on'));
+    }else{
+      openStaffMenuSection('performance');
+    }
+    return;
+  }
   const tab=e.target.closest('.sb-item');
   if(tab&&tab.dataset.tab){
     if(tab.dataset.tab==='commission-admin'&&(!CU||CU.role!=='manager')){toast('غير مسموح','e');return;}
@@ -5234,6 +5290,9 @@ document.getElementById('nav-tabs').addEventListener('click',e=>{
     }
     if(tab.dataset.tab!=='master'&&tab.dataset.tab!=='upload'){
       document.querySelectorAll('#nav-tabs .sb-subitem[data-db-menu]').forEach(el=>el.classList.remove('on'));
+    }
+    if(tab.dataset.tab!=='staff'){
+      document.querySelectorAll('#nav-tabs .sb-subitem[data-staff-menu]').forEach(el=>el.classList.remove('on'));
     }
     gTab(tab.dataset.tab);
   }
