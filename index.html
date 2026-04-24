@@ -7824,6 +7824,8 @@ function renderUsersPage(){
     const u=users[k];
     const [rc,rl]=roleMap[u.role]||['b-dim','—'];
     const permsCount=(u.perms||[]).length;
+    const receivedBranches=getUserReceivedBranches(u);
+    const branchesCount=receivedBranches.length;
     const totalPerms=ALL_TAB_IDS.length;
     const stBadge=u.status==='active'?'<span class="badge b-grn">نشط</span>':'<span class="badge b-red">معطّل</span>';
     const isSelf=CU&&CU.username===k;
@@ -7836,7 +7838,10 @@ function renderUsersPage(){
       <td><span class="badge ${rc}">${rl}</span></td>
       <td style="font-family:var(--mono);font-size:11px;direction:ltr">${u.phone||'—'}</td>
       <td style="font-size:11px;direction:ltr">${u.email||'—'}</td>
-      <td><span class="badge b-pur">${permsCount}/${totalPerms}</span></td>
+      <td>
+        <span class="badge b-pur">${permsCount}/${totalPerms}</span>
+        ${branchesCount?`<div style="margin-top:4px"><span class="badge b-blu">فروع الاستلام: ${branchesCount}</span></div>`:''}
+      </td>
       <td>${stBadge}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-ghost btn-sm" onclick="editUser('${k}')">✏️ تعديل</button>
