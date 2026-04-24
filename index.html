@@ -6080,10 +6080,6 @@ async function fetchAPIShipments(){
     };
 
     const parsedBaseUrl=new URL(normalizedBaseUrl,window.location.origin);
-    const delayParamRaw=String(parsedBaseUrl.searchParams.get('delay_days')||'').trim();
-    const parsedDelay=/^\d+$/.test(delayParamRaw)?parseInt(delayParamRaw,10):null;
-    // API shipments delay must start from day 2 minimum.
-    const startDelay=parsedDelay===null?2:Math.max(2,parsedDelay);
     const MAX_PAGES=500; // safety limit for very large APIs
 
     const appendUniqueItems=(items)=>{
@@ -6146,11 +6142,15 @@ async function fetchAPIShipments(){
       return dayRawCount;
     };
 
-    // Performance: fetch a single delayed stream (delay_days >= startDelay on this API),
+    // Performance: fetch a single delayed stream,
     // then paginate cursors only. Keep shipments API isolated from branch/transfers sources.
     const effectiveUrl=new URL(parsedBaseUrl.toString());
-    effectiveUrl.searchParams.set('delay_days',String(startDelay));
-    await fetchAllPagesForBase(effectiveUrl.toString(),`delay_days>=${startDelay}`);
+    const hasDelay=effectiveUrl.searchParams.getAll('delay_days').some(v=>String(v||'').trim()!=='');
+    if(!hasDelay){
+      // Backward-compatible default only when user didn't provide delay_days explicitly.
+      effectiveUrl.searchParams.set('delay_days','2');
+    }
+    await fetchAllPagesForBase(effectiveUrl.toString(),`api fetch`);
 
     if(!rawData.length){
       if(el)el.textContent='⚠️ لا بيانات في رد API';
