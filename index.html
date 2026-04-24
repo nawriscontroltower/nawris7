@@ -2499,7 +2499,7 @@ function removeDeprecatedTabs(){
   // Remove API from sidebar only (its page is moved into Shipments panel later).
   document.querySelector('#nav-tabs .sb-item[data-tab="api-shipments"]')?.remove();
   // Remove fully deprecated tabs.
-  ['janzour-rates','service-kpi','commission-admin'].forEach(tabId=>{
+  ['service-kpi','commission-admin'].forEach(tabId=>{
     document.querySelector(`#nav-tabs .sb-item[data-tab="${tabId}"]`)?.remove();
     document.getElementById(`tab-${tabId}`)?.remove();
   });
@@ -5089,7 +5089,7 @@ function setAlpha(l){
 function gTab(id){
   if(id==='api-shipments')id='shipments';
   if(id==='branches-followup')id='returns';
-  if(id==='janzour-rates'||id==='service-kpi'||id==='commission-admin')id='home';
+  if(id==='service-kpi'||id==='commission-admin')id='home';
   document.querySelectorAll('#nav-tabs .sb-item').forEach(t=>{
     const tId=t.dataset.tab;
     const active=id==='upload' ? tId==='master' : tId===id;
