@@ -2085,9 +2085,9 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         </div>
       </div>
       <div class="fg" id="um-rbranches-section">
-        <label class="fl">صلاحية استلام الفروع (تظهر في التعيين)</label>
+        <label class="fl">الفروع المسموح باستلام طرودها (تظهر في التعيين)</label>
         <div id="um-rbranches-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-top:6px"></div>
-        <div style="font-size:11px;color:var(--mute);margin-top:6px">اختر الفروع التي يسمح للموظف باستلام طرودها.</div>
+        <div style="font-size:11px;color:var(--mute);margin-top:6px">حدّد فرعاً واحداً أو أكثر: يُسمح للموظف بإسناد واستلام طرود تنتمي لهذه الفروع فقط (حسب حقل الفرع في بيانات الطرد).</div>
       </div>
     </div>
     <div class="mf">
@@ -6155,22 +6155,20 @@ function getExplicitlySelectedApiIds(){
   const ids=[...document.querySelectorAll('#a-tbody input[type="checkbox"][data-asid]:checked')].map(el=>String(el.dataset.asid||'').trim()).filter(Boolean);
   return [...new Set(ids)];
 }
+/** فروع مسموح للموظف باستلام/إسناد طرودها فقط (whitelist). إذا فارغة = لا قيد على الفرع. */
 function getUserReceivedBranches(userObj){
   const raw=userObj?.received_branches??userObj?.received_branch??userObj?.['received-branch']??[];
   const list=Array.isArray(raw)?raw:String(raw||'').split(/[,\n|]/);
-  const fromPerms=(Array.isArray(userObj?.perms)?userObj.perms:[])
-    .filter(p=>String(p||'').toLowerCase().startsWith('received-branch:'))
-    .flatMap(p=>String(p).split(':').slice(1).join(':').split(/[,\n|]/));
-  return [...list,...fromPerms].map(v=>normalizeIdentityText(v)).filter(Boolean);
+  return list.map(v=>normalizeIdentityText(v)).filter(Boolean);
 }
 function canAssignParcelToEmployee(parcel,empName){
   const emp=Object.values(USERS).find(u=>String(u?.name||'')===String(empName||''));
   if(!emp)return false;
-  const restricted=getUserReceivedBranches(emp);
-  if(!restricted.length)return true;
+  const allowed=getUserReceivedBranches(emp);
+  if(!allowed.length)return true;
   const branchNorm=normalizeIdentityText(parcel?.current_branch||parcel?.branch||'');
-  if(!branchNorm)return true;
-  return !restricted.some(b=>branchNorm===b||branchNorm.includes(b)||b.includes(branchNorm));
+  if(!branchNorm)return false;
+  return allowed.some(b=>branchNorm===b||branchNorm.includes(b)||b.includes(branchNorm));
 }
 function persistApiProcessedCodes(){
   try{sessionStorage.setItem('api_processed_codes',JSON.stringify([...apiProcessedCodes]));}catch(_){}
@@ -7869,7 +7867,7 @@ function renderUsersPage(){
       <td style="font-size:11px;direction:ltr">${u.email||'—'}</td>
       <td>
         <span class="badge b-pur">${permsCount}/${totalPerms}</span>
-        ${branchesCount?`<div style="margin-top:4px"><span class="badge b-blu">فروع الاستلام: ${branchesCount}</span></div>`:''}
+        ${branchesCount?`<div style="margin-top:4px"><span class="badge b-blu">فروع مسموحة: ${branchesCount}</span></div>`:''}
       </td>
       <td>${stBadge}</td>
       <td style="white-space:nowrap">
@@ -8572,7 +8570,7 @@ function assignSelected(){
   renderAPIShipments();
   renderAssignStats();
   refreshAssignPanelEmps();
-  if(blocked>0)toast(`⚠️ تم منع ${blocked} طرد بسبب صلاحية received-branch`,'w');
+  if(blocked>0)toast(`⚠️ تم منع ${blocked} طرد لأن فرع الطرد ليس ضمن الفروع المسموحة لهذا الموظف`,'w');
   toast(`✅ تم تعيين ${count} طرد إلى ${emp}`,'s');
 }
 function bulkAssignFilteredBranch(){
@@ -8591,7 +8589,7 @@ function bulkAssignFilteredBranch(){
   renderAPIShipments();
   renderAssignStats();
   refreshAssignPanelEmps();
-  if(blocked>0)toast(`⚠️ تم منع ${blocked} طرد بسبب صلاحية received-branch`,'w');
+  if(blocked>0)toast(`⚠️ تم منع ${blocked} طرد لأن فرع الطرد ليس ضمن الفروع المسموحة لهذا الموظف`,'w');
   toast(`✅ تم تعيين ${count} طرد من ${branch||'كل الفروع'} إلى ${emp}`,'s');
 }
 
