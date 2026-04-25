@@ -4023,15 +4023,25 @@ function renderReturns(){
     return cr.result==='solved'||cr.result==='contacted';
   };
   const activeList=list.filter(r=>!isRetProcessed(r));
-  // Processed: from current data + cached items that disappeared from API
   const processedFromData=list.filter(r=>isRetProcessed(r));
+  // Also find processed items from Supabase contact_results_db that are no longer in returns_data
   const currentCodes=new Set(returns_data.map(r=>r.shipments?.tracking_code||'').filter(Boolean));
-  const cache=_getRetProcessedCache();
-  const processedFromCache=Object.values(cache)
-    .filter(c=>!currentCodes.has(c.tracking_code))
-    .filter(c=>{const cr=getCR('ret_'+c.tracking_code);return cr.result==='solved'||cr.result==='contacted';})
-    .map(c=>({shipments:{tracking_code:c.tracking_code,customer_name:c.customer_name,customer_phone:c.customer_phone},drivers:{name:c.driver_name,phone:c.driver_phone},branch:c.branch,location:c.location,delay_days:c.delay_days,reason:c.reason,_cached:true}));
-  const processedList=[...processedFromData,...processedFromCache];
+  const processedFromDB=(contact_results_db||[])
+    .filter(cr=>{
+      const sid=String(cr.shipment_id||'');
+      const tc=String(cr.tracking_code||'');
+      if(!sid.startsWith('ret_'))return false;
+      const code=sid.slice(4);
+      if(currentCodes.has(code))return false; // already in live data
+      return cr.result==='solved'||cr.result==='contacted';
+    })
+    .map(cr=>{
+      const code=String(cr.shipment_id||'').slice(4);
+      const cache=_getRetProcessedCache();
+      const c=cache[code]||{};
+      return {shipments:{tracking_code:code,customer_name:c.customer_name||'',customer_phone:c.customer_phone||''},drivers:{name:c.driver_name||'',phone:c.driver_phone||''},branch:c.branch||'',location:c.location||'in_warehouse',delay_days:c.delay_days||0,reason:c.reason||'',_cached:true};
+    });
+  const processedList=[...processedFromData,...processedFromDB];
   const showProcessedRet=!!document.getElementById('r-show-processed-mode')?.dataset?.active;
 
   const setTxt=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=String(val);};
