@@ -502,8 +502,11 @@ tbody tr:last-child td{border-bottom:none}
 tbody tr.pr:hover td{background:rgba(124,77,255,.07)}
 tbody tr:hover td{background:rgba(124,77,255,.04)}
 /* Compact layout only for "متابعة الفروع" (في الشركة + التحويلات) */
-#tab-returns .branch-row{padding:8px 10px;gap:6px;min-height:46px}
-#tab-returns .branch-row > div{line-height:1.25}
+#tab-returns .branch-row{
+  grid-template-columns:minmax(90px,auto) minmax(140px,1.2fr) minmax(140px,1.2fr) auto auto auto;
+  padding:8px 10px;gap:6px;min-height:46px
+}
+#tab-returns .branch-row > div{line-height:1.25;min-width:0}
 #tab-returns .branch-list{gap:7px}
 #tab-transfers .trip-row{padding:8px 10px}
 #tab-transfers .trip-children .shipment-row{padding:7px 10px}
