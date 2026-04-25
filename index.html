@@ -3861,7 +3861,7 @@ function renderReturns(){
   const allowed=getReturnLocs();
   // Build locMap from return statuses (default + custom)
   const customRS=getAllReturnStatuses();
-  const locMap={with_driver:'مع المندوب',in_warehouse:'في المخزن',returned_to_store:'تسليم للمتجر'};
+  const locMap={with_driver:'مع المندوب',in_warehouse:'في الشركة',returned_to_store:'تسليم للمتجر'};
   customRS.forEach(s=>{const key=s.label.replace(/\s+/g,'_').toLowerCase();locMap[key]=s.label;});
   const rsnMap={customer_refused:'رفض العميل',wrong_address:'عنوان خاطئ',no_answer:'لا يرد',damaged:'تالف',other:'أخرى'};
 
