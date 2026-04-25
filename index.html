@@ -6267,16 +6267,21 @@ async function fetchAPIShipments(){
         const n=keyNorm(k);
         return n.includes('code')||n.includes('track')||n.includes('awb')||n.includes('orderid')||n.includes('رقم')||n.includes('رمز')||n.includes('كود');
       };
-      const cleanCodeValue=(v)=>String(v||'').trim().replace(/[\u200e\u200f\u202a-\u202e]/g,'');
+      const cleanCodeValue=(v)=>String(v==null?'':v).trim().replace(/[\u200e\u200f\u202a-\u202e]/g,'');
       const looksLikeParcelCode=v=>{
         if(!v||v.length<4||v.length>48)return false;
         if(/\s/.test(v))return false;
+        // Accept numeric codes and numeric+R suffix as explicitly required.
+        if(/^[0-9]+[Rr]?$/.test(v))return true;
+        // Keep broader support for mixed alphanumeric codes coming from some stores.
         if(!/\d/.test(v))return false;
         return/^[A-Za-z0-9_-]+$/.test(v);
       };
+      // Hard fix: if payload has "code", always treat it as text and use it directly.
+      const payloadCode=cleanCodeValue(item?.code);
+      if(payloadCode)return payloadCode.toUpperCase();
       // Hard-priority direct fields from API payload.
       const directPriority=[
-        item?.code,
         item?.tracking_code,
         item?.trackingCode,
         item?.return_tracking_code,
@@ -6867,7 +6872,8 @@ function renderAPIShipments(){
   const showProcessed=!!document.getElementById('a-show-processed')?.checked;
   const hasExplicitQuery=Boolean(q&&String(q).trim());
   let list=[...apiShipments];
-  if(isEmployee){
+  // For employees, keep scoped view by default; allow explicit search to locate any parcel code quickly.
+  if(isEmployee&&!hasExplicitQuery){
     list=list.filter(s=>String(assignments[s.tracking_code]||'')===String(myName));
   }
   const forceShowProcessedForStatus=(fst==='returned'||fst==='delivered');
