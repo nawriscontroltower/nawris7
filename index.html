@@ -1111,23 +1111,48 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       <div class="branch-kpi delivered"><div>تم التسليم</div><strong id="r-kpi-delivered">0</strong></div>
     </div>
     <div class="fbar branch-filters sticky">
-      <input class="fi fi-grow" id="r-q" type="text" placeholder="🔍 بحث بالكود أو العميل أو المندوب..." oninput="renderReturns()">
-      <select class="fi" id="r-loc" onchange="renderReturns()" id="r-loc-sel">
-        <option value="">كل المواقع</option>
-        <option value="with_driver">مع المندوب</option>
-        <option value="in_warehouse">في المخزن</option>
-        <option value="returned_to_store">تم التسليم للمتجر</option>
-      </select>
-      <select class="fi" id="r-rsn" onchange="renderReturns()">
-        <option value="">كل الحالات</option>
-        <option value="customer_refused">رفض العميل</option>
-        <option value="wrong_address">عنوان خاطئ</option>
-        <option value="no_answer">لا يرد</option>
-        <option value="damaged">تالف</option>
-        <option value="other">أخرى</option>
-      </select>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('r-q').value='';document.getElementById('r-loc').value='';document.getElementById('r-rsn').value='';renderReturns()">✕ مسح</button>
+      <button class="btn btn-ghost btn-sm" onclick="openReturnsFiltersDrawer()">⚙️ تصفية</button>
     </div>
+    <div class="flt-drawer-overlay" id="returns-filters-overlay" onclick="closeReturnsFiltersDrawer()"></div>
+    <aside class="flt-drawer" id="returns-filters-drawer" aria-hidden="true">
+      <div class="flt-drawer-head">
+        <strong style="font-size:14px">تصفية المرتجعات</strong>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('r-q').value='';document.getElementById('r-loc').value='';document.getElementById('r-rsn').value='';document.getElementById('r-fbranch').value='';document.getElementById('r-fdriver').value='';document.getElementById('r-fdelay').value='';renderReturns();">✕ مسح</button>
+          <button class="btn btn-ghost btn-sm" onclick="closeReturnsFiltersDrawer()">✕ إغلاق</button>
+        </div>
+      </div>
+      <div class="flt-drawer-body">
+        <input class="fi fi-grow" id="r-q" type="text" placeholder="🔍 بحث بالكود، العميل، المندوب..." oninput="renderReturns()">
+        <select class="fi" id="r-loc" onchange="renderReturns()">
+          <option value="">كل المواقع</option>
+          <option value="with_driver">مع المندوب</option>
+          <option value="in_warehouse">في المخزن</option>
+          <option value="returned_to_store">تم التسليم للمتجر</option>
+        </select>
+        <select class="fi" id="r-rsn" onchange="renderReturns()">
+          <option value="">كل الحالات</option>
+          <option value="customer_refused">رفض العميل</option>
+          <option value="wrong_address">عنوان خاطئ</option>
+          <option value="no_answer">لا يرد</option>
+          <option value="damaged">تالف</option>
+          <option value="other">أخرى</option>
+        </select>
+        <select class="fi" id="r-fbranch" onchange="renderReturns()">
+          <option value="">كل الفروع</option>
+        </select>
+        <select class="fi" id="r-fdriver" onchange="renderReturns()">
+          <option value="">كل المناديب</option>
+        </select>
+        <select class="fi" id="r-fdelay" onchange="renderReturns()">
+          <option value="">كل أيام التأخير</option>
+          <option value="0-2">0-2 أيام</option>
+          <option value="3-7">3-7 أيام</option>
+          <option value="8-15">8-15 يوم</option>
+          <option value="16+">+16 يوم</option>
+        </select>
+      </div>
+    </aside>
     <div id="returns-list" class="branch-list" aria-live="polite">
       <div class="branch-empty">لا توجد بيانات</div>
     </div>
@@ -1165,18 +1190,30 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       <div class="branch-kpi delivered"><div>تم التسليم</div><strong id="t-kpi-delivered">0</strong></div>
     </div>
     <div class="fbar branch-filters sticky">
-      <input class="fi fi-grow" id="t-q" type="text" placeholder="🔍 بحث بالكود أو المسار..." oninput="renderTransfers()">
-      <select class="fi" id="t-st" onchange="renderTransfers()">
-        <option value="">كل الحالات</option>
-        <option value="delivered">تم التسليم</option>
-        <option value="delayed">متأخر</option>
-        <option value="pending">معلق</option>
-      </select>
-      <select class="fi" id="t-branch" onchange="renderTransfers()">
-        <option value="">كل الفروع</option>
-      </select>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('t-q').value='';document.getElementById('t-st').value='';document.getElementById('t-branch').value='';renderTransfers()">✕ مسح</button>
+      <button class="btn btn-ghost btn-sm" onclick="openTransfersFiltersDrawer()">⚙️ تصفية</button>
     </div>
+    <div class="flt-drawer-overlay" id="transfers-filters-overlay" onclick="closeTransfersFiltersDrawer()"></div>
+    <aside class="flt-drawer" id="transfers-filters-drawer" aria-hidden="true">
+      <div class="flt-drawer-head">
+        <strong style="font-size:14px">تصفية التحويلات</strong>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('t-q').value='';document.getElementById('t-st').value='';document.getElementById('t-branch').value='';renderTransfers();">✕ مسح</button>
+          <button class="btn btn-ghost btn-sm" onclick="closeTransfersFiltersDrawer()">✕ إغلاق</button>
+        </div>
+      </div>
+      <div class="flt-drawer-body">
+        <input class="fi fi-grow" id="t-q" type="text" placeholder="🔍 بحث بالكود أو المسار..." oninput="renderTransfers()">
+        <select class="fi" id="t-st" onchange="renderTransfers()">
+          <option value="">كل الحالات</option>
+          <option value="delivered">تم التسليم</option>
+          <option value="delayed">متأخر</option>
+          <option value="pending">معلق</option>
+        </select>
+        <select class="fi" id="t-branch" onchange="renderTransfers()">
+          <option value="">كل الفروع</option>
+        </select>
+      </div>
+    </aside>
     <div class="tr-wrap">
       <div class="tr-head">
         <div>الرحلة</div>
@@ -3837,18 +3874,45 @@ function renderReturns(){
   const q=normalizeIdentityText(document.getElementById('r-q')?.value||'');
   const loc=document.getElementById('r-loc')?.value||'';
   const rsn=document.getElementById('r-rsn')?.value||'';
+  const fbranch=document.getElementById('r-fbranch')?.value||'';
+  const fdriver=document.getElementById('r-fdriver')?.value||'';
+  const fdelay=document.getElementById('r-fdelay')?.value||'';
   const allowed=getReturnLocs();
   // Build locMap from return statuses (default + custom)
   const customRS=getAllReturnStatuses();
   const locMap={with_driver:'مع المندوب',in_warehouse:'في المخزن',returned_to_store:'تسليم للمتجر'};
   customRS.forEach(s=>{const key=s.label.replace(/\s+/g,'_').toLowerCase();locMap[key]=s.label;});
   const rsnMap={customer_refused:'رفض العميل',wrong_address:'عنوان خاطئ',no_answer:'لا يرد',damaged:'تالف',other:'أخرى'};
+
+  // Build dynamic dropdown options for branch and driver
+  const branchesSet=new Set(returns_data.map(r=>String(r.branch||r.branches?.name||'').trim()).filter(Boolean));
+  const driversSet=new Set(returns_data.map(r=>String(r.drivers?.name||'').trim()).filter(Boolean));
+  const brEl=document.getElementById('r-fbranch');
+  if(brEl&&!fbranch)brEl.innerHTML='<option value="">كل الفروع</option>'+[...branchesSet].sort().map(b=>`<option>${b}</option>`).join('');
+  const drEl=document.getElementById('r-fdriver');
+  if(drEl&&!fdriver)drEl.innerHTML='<option value="">كل المناديب</option>'+[...driversSet].sort().map(d=>`<option>${d}</option>`).join('');
+
   let list=returns_data.filter(r=>{
     if(!allowed.includes(r.location))return false;
     if(loc&&r.location!==loc)return false;
     if(rsn&&r.reason!==rsn)return false;
+    if(fbranch){
+      const rb=String(r.branch||r.branches?.name||'').trim();
+      if(rb!==fbranch)return false;
+    }
+    if(fdriver){
+      const rd=String(r.drivers?.name||'').trim();
+      if(rd!==fdriver)return false;
+    }
+    if(fdelay){
+      const d=Number(r.delay_days||0)||0;
+      if(fdelay==='0-2'&&d>2)return false;
+      if(fdelay==='3-7'&&(d<3||d>7))return false;
+      if(fdelay==='8-15'&&(d<8||d>15))return false;
+      if(fdelay==='16+'&&d<16)return false;
+    }
     if(q){
-      const text=normalizeIdentityText(`${r.shipments?.tracking_code||''} ${r.shipments?.customer_name||''} ${r.drivers?.name||''}`);
+      const text=normalizeIdentityText(`${r.shipments?.tracking_code||''} ${r.shipments?.customer_name||''} ${r.drivers?.name||''} ${r.branch||''}`);
       if(!text.includes(q))return false;
     }
     return true;
@@ -5222,6 +5286,36 @@ function openBranchesMenuSection(section){
 function openDatabaseMenuSection(section){
   gTab(section==='upload'?'upload':'master');
 }
+function openTransfersFiltersDrawer(){
+  const d=document.getElementById('transfers-filters-drawer');
+  const o=document.getElementById('transfers-filters-overlay');
+  if(!d||!o)return;
+  d.classList.add('on');d.setAttribute('aria-hidden','false');
+  o.classList.add('on');
+}
+function closeTransfersFiltersDrawer(){
+  const d=document.getElementById('transfers-filters-drawer');
+  const o=document.getElementById('transfers-filters-overlay');
+  if(!d||!o)return;
+  d.classList.remove('on');d.setAttribute('aria-hidden','true');
+  o.classList.remove('on');
+}
+
+function openReturnsFiltersDrawer(){
+  const d=document.getElementById('returns-filters-drawer');
+  const o=document.getElementById('returns-filters-overlay');
+  if(!d||!o)return;
+  d.classList.add('on');d.setAttribute('aria-hidden','false');
+  o.classList.add('on');
+}
+function closeReturnsFiltersDrawer(){
+  const d=document.getElementById('returns-filters-drawer');
+  const o=document.getElementById('returns-filters-overlay');
+  if(!d||!o)return;
+  d.classList.remove('on');d.setAttribute('aria-hidden','true');
+  o.classList.remove('on');
+}
+
 function openStaffMenuSection(section){
   setStaffSection(section||'performance');
   gTab('staff');
