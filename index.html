@@ -6267,6 +6267,33 @@ async function fetchAPIShipments(){
         const n=keyNorm(k);
         return n.includes('code')||n.includes('track')||n.includes('awb')||n.includes('orderid')||n.includes('رقم')||n.includes('رمز')||n.includes('كود');
       };
+      const cleanCodeValue=(v)=>String(v||'').trim().replace(/[\u200e\u200f\u202a-\u202e]/g,'');
+      const looksLikeParcelCode=v=>{
+        if(!v||v.length<4||v.length>48)return false;
+        if(/\s/.test(v))return false;
+        if(!/\d/.test(v))return false;
+        return/^[A-Za-z0-9_-]+$/.test(v);
+      };
+      // Hard-priority direct fields from API payload.
+      const directPriority=[
+        item?.code,
+        item?.tracking_code,
+        item?.trackingCode,
+        item?.return_tracking_code,
+        item?.return_code,
+        item?.return_order_code,
+        item?.reverse_tracking_code,
+        item?.shipment_code,
+        item?.parcel_code,
+        item?.ParcelCode,
+        item?.order_code,
+        item?.awb,
+        item?.reference
+      ];
+      for(const raw of directPriority){
+        const v=cleanCodeValue(raw);
+        if(looksLikeParcelCode(v))return v.toUpperCase();
+      }
       const namedCandidates=[
         item?.tracking_code,
         item?.trackingCode,
@@ -6305,15 +6332,9 @@ async function fetchAPIShipments(){
         });
       }catch(_){}
       const candidates=namedCandidates
-        .map(v=>String(v||'').trim().replace(/[\u200e\u200f\u202a-\u202e]/g,''))
+        .map(v=>cleanCodeValue(v))
         .filter(Boolean);
       if(!candidates.length)return 'API-'+Date.now()+'-'+fallbackIndex;
-      const looksLikeParcelCode=v=>{
-        if(!v||v.length<4||v.length>48)return false;
-        if(/\s/.test(v))return false;
-        if(!/\d/.test(v))return false;
-        return/^[A-Za-z0-9_-]+$/.test(v);
-      };
       const hits=candidates.map((v,idx)=>({v,idx})).filter(x=>looksLikeParcelCode(x.v));
       if(hits.length){
         const score=v=>{
@@ -6891,7 +6912,17 @@ function renderAPIShipments(){
     }
     if(q){
       const haystack=normalizeIdentityText(`${s.tracking_code} ${s.client_name} ${s.receiver_name} ${s.captain} ${s.customer_phone} ${s.current_branch} ${s.government} ${s.area}`);
-      if(!haystack.includes(q))return false;
+      const codeNorm=normalizeIdentityText(s.tracking_code||'');
+      const qCompact=q.replace(/[^a-z0-9]/g,'');
+      const codeCompact=codeNorm.replace(/[^a-z0-9]/g,'');
+      const haystackCompact=haystack.replace(/[^a-z0-9]/g,'');
+      const codeMatched=Boolean(
+        codeNorm&&(
+          codeNorm.includes(q)
+          || (qCompact&&codeCompact.includes(qCompact))
+        )
+      );
+      if(!codeMatched&&!haystack.includes(q)&&!(qCompact&&haystackCompact.includes(qCompact)))return false;
     }
     return true;
   }).sort((a,b)=>{
