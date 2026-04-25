@@ -6011,11 +6011,7 @@ let apiFetchLog=[];
 let aSortKey='delay_days', aSortDir='desc';
 let apiFilteredData=[], apiFilteredIds=[], apiLastSelectedSid='';
 let apiProcessedCodes=new Set();
-try{
-  const _stored=JSON.parse(sessionStorage.getItem('api_processed_codes')||'[]');
-  // Restore processed codes but strip any that look like R-codes (returned) — they must always be visible.
-  apiProcessedCodes=new Set(_stored.filter(c=>!/R$/i.test(String(c||'').trim())));
-}catch(_){apiProcessedCodes=new Set();}
+try{apiProcessedCodes=new Set(JSON.parse(sessionStorage.getItem('api_processed_codes')||'[]'));}catch(_){apiProcessedCodes=new Set();}
 
 // ══════════════════════════════════════════
 // JANZOUR STORES — Isolated view
