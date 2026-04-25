@@ -8646,40 +8646,78 @@ function saveCommissionOverridesFromAdmin(){
 // ══════════════════════════════════════════
 // API SHIPMENTS ASSIGNMENT SYSTEM
 // ══════════════════════════════════════════
-function getAPIAssignments(){
-  try{return JSON.parse(localStorage.getItem('api_assignments')||'{}');}catch{return {};}
+// ── Assignment Storage: localStorage + Supabase sync ──
+// Format: { "CODE": { emp: "حمزة", at: 1714060000000 }, ... }
+// Legacy format "CODE": "name" is auto-migrated on read.
+
+function _migrateAssignEntry(v){
+  if(v&&typeof v==='object'&&v.emp)return v;
+  if(typeof v==='string')return {emp:v,at:Date.now()};
+  return null;
 }
+// Internal: returns { CODE: {emp,at}, ... }
+function _getAssignmentsRaw(){
+  try{
+    const raw=JSON.parse(localStorage.getItem('api_assignments')||'{}');
+    const out={};
+    for(const [k,v] of Object.entries(raw)){
+      const m=_migrateAssignEntry(v);
+      if(m&&m.emp)out[k]=m;
+    }
+    return out;
+  }catch{return {};}
+}
+// Public: returns flat { CODE: "name" } — used everywhere for filtering/rendering
+function getAPIAssignments(){
+  const raw=_getAssignmentsRaw();
+  const flat={};
+  for(const [k,v] of Object.entries(raw))flat[k]=v.emp;
+  return flat;
+}
+
+let _assignSyncTimer=null;
+let _assignSyncPending=null;
+
 function saveAPIAssignments(obj){
   localStorage.setItem('api_assignments',JSON.stringify(obj));
-  // Sync to Supabase so all devices share the same assignments
-  syncAssignmentsToSupabase(obj);
-}
-let _assignSyncTimer=null;
-function syncAssignmentsToSupabase(obj){
+  // Optimistic: UI already updated. Sync to Supabase in background.
+  _assignSyncPending=obj;
   clearTimeout(_assignSyncTimer);
-  _assignSyncTimer=setTimeout(async()=>{
-    try{
-      const val=JSON.stringify(obj);
-      // Upsert into settings table
-      await fetch(`${SB}/rest/v1/settings?key=eq.api_assignments`,{
-        method:'DELETE',headers:H
-      });
-      await fetch(`${SB}/rest/v1/settings`,{
-        method:'POST',
-        headers:{...H,'Prefer':'return=minimal'},
-        body:JSON.stringify({key:'api_assignments',value:val})
-      });
-    }catch(e){console.warn('Assignment sync failed:',e);}
-  },500);
+  _assignSyncTimer=setTimeout(()=>_flushAssignSync(),600);
 }
+async function _flushAssignSync(){
+  const obj=_assignSyncPending;
+  if(!obj)return;
+  try{
+    await sbUp('settings',[{key:'api_assignments',value:JSON.stringify(obj)}]);
+    _assignSyncPending=null;
+  }catch(e){
+    console.warn('Assignment sync failed, will retry on reconnect:',e);
+    // Retry when connection comes back
+    window.removeEventListener('online',_onlineRetryAssign);
+    window.addEventListener('online',_onlineRetryAssign,{once:true});
+  }
+}
+function _onlineRetryAssign(){
+  if(_assignSyncPending)_flushAssignSync();
+}
+
 async function loadAssignmentsFromSupabase(){
   try{
     const rows=await sb('settings','GET',null,'?key=eq.api_assignments&select=value');
     if(rows&&rows[0]&&rows[0].value){
       const remote=JSON.parse(rows[0].value);
-      const local=getAPIAssignments();
-      // Merge: remote wins for conflicts, keep local additions
-      const merged={...local,...remote};
+      const local=_getAssignmentsRaw();
+      // Merge with timestamp-based conflict resolution: newest wins
+      const merged={};
+      const allKeys=new Set([...Object.keys(local),...Object.keys(remote)]);
+      for(const k of allKeys){
+        const l=_migrateAssignEntry(local[k]);
+        const r=_migrateAssignEntry(remote[k]);
+        if(l&&r) merged[k]=(l.at||0)>=(r.at||0)?l:r;
+        else if(l) merged[k]=l;
+        else if(r) merged[k]=r;
+      }
       localStorage.setItem('api_assignments',JSON.stringify(merged));
       return merged;
     }
@@ -8688,10 +8726,11 @@ async function loadAssignmentsFromSupabase(){
 }
 
 function setAssignedTo(code,empName){
-  const a=getAPIAssignments();
-  if(empName)a[code]=empName;
+  const a=_getAssignmentsRaw();
+  if(empName)a[code]={emp:empName,at:Date.now()};
   else delete a[code];
   saveAPIAssignments(a);
+  // Optimistic UI update — instant feedback
   const s=apiShipments.find(x=>String(x.tracking_code)===String(code));
   renderAPIShipments();
   renderAssignStats();
