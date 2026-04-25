@@ -6199,7 +6199,7 @@ function reconcileApiProcessedFromStatus(nextShipments){
     nextSnap[code]=st;
     const prev=String(snap[code]||'').trim().toLowerCase();
     if(prev&&prev!==st)apiProcessedCodes.add(code);
-    if(st==='delivered'||st==='returned'||st==='processed')apiProcessedCodes.add(code);
+    if(st==='delivered'||st==='processed')apiProcessedCodes.add(code);
   });
   try{sessionStorage.setItem('api_status_snapshot',JSON.stringify(nextSnap));}catch(_){}
   persistApiProcessedCodes();
@@ -6897,8 +6897,9 @@ function renderAPIShipments(){
   }
   const forceShowProcessedForStatus=(fst==='returned'||fst==='delivered');
   // When user searches by code/text, do not hide processed rows.
+  // Never hide returned (R-code) shipments — they need follow-up.
   if(!showProcessed&&!forceShowProcessedForStatus&&!hasExplicitQuery){
-    list=list.filter(s=>!apiProcessedCodes.has(String(s.tracking_code||'')));
+    list=list.filter(s=>s.status==='returned'||!apiProcessedCodes.has(String(s.tracking_code||'')));
   }
 
   // Segment filter
