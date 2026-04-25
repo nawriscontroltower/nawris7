@@ -7253,17 +7253,17 @@ function updateJanzourAssignControls(){
 function assignSelectedJanzour(){
   const emp=document.getElementById('j-assign-emp')?.value||'';
   if(!emp){toast('اختر موظفاً أولاً','w');return;}
-  const a=getAPIAssignments(); let count=0;
+  const a=_getAssignmentsRaw();const now=Date.now();let count=0;
   jChecked.forEach(id=>{
     const s=apiShipments.find(x=>String(x.id)===String(id));
-    if(s){a[s.tracking_code]=emp;count++;}
+    if(s){a[s.tracking_code]={emp,at:now};count++;}
   });
   saveAPIAssignments(a);
   renderJanzour();renderAPIShipments();renderAssignStats();refreshAssignPanelEmps();
   toast(`✅ تم تعيين ${count} طرد في جنزور إلى ${emp}`,'s');
 }
 function unassignSelectedJanzour(){
-  const a=getAPIAssignments(); let count=0;
+  const a=_getAssignmentsRaw();let count=0;
   jChecked.forEach(id=>{
     const s=apiShipments.find(x=>String(x.id)===String(id));
     if(s&&a[s.tracking_code]){delete a[s.tracking_code];count++;}
@@ -7278,8 +7278,8 @@ function bulkAssignFilteredJanzourBranch(){
   if(!emp){toast('اختر موظفاً أولاً','w');return;}
   const targets=jFilteredData.filter(s=>!branch||String(s.current_branch||'').trim()===branch);
   if(!targets.length){toast('لا توجد طرود مطابقة','w');return;}
-  const a=getAPIAssignments();
-  targets.forEach(s=>{a[s.tracking_code]=emp;});
+  const a=_getAssignmentsRaw();const now=Date.now();
+  targets.forEach(s=>{a[s.tracking_code]={emp,at:now};});
   saveAPIAssignments(a);
   renderJanzour();renderAPIShipments();renderAssignStats();refreshAssignPanelEmps();
   toast(`✅ تم تعيين ${targets.length} طرد من ${branch||'كل الفروع'} إلى ${emp}`,'s');
@@ -7288,7 +7288,7 @@ function bulkUnassignFilteredJanzourBranch(){
   const branch=document.getElementById('j-assign-branch')?.value||'';
   const targets=jFilteredData.filter(s=>!branch||String(s.current_branch||'').trim()===branch);
   if(!targets.length){toast('لا توجد طرود مطابقة','w');return;}
-  const a=getAPIAssignments(); let count=0;
+  const a=_getAssignmentsRaw();let count=0;
   targets.forEach(s=>{
     if(a[s.tracking_code]){
       delete a[s.tracking_code];
@@ -8764,17 +8764,17 @@ function autoAssign(method){
     :Object.values(USERS).filter(u=>u.status!=='inactive'&&u.name).map(u=>u.name);
   if(!emps.length){toast('لا يوجد موظفون للتوزيع — أضف موظفين من تبويب المستخدمون','w');return;}
 
-  const a=getAPIAssignments();
-  const unassigned=apiShipments.filter(s=>!a[s.tracking_code]);
+  const a=_getAssignmentsRaw();
+  const flat=getAPIAssignments();
+  const unassigned=apiShipments.filter(s=>!flat[s.tracking_code]);
 
   if(!unassigned.length){toast('كل الطرود مسندة مسبقاً','w');return;}
+  const now=Date.now();
 
   if(method==='equal'){
-    // Round-robin
-    unassigned.forEach((s,i)=>{a[s.tracking_code]=emps[i%emps.length];});
+    unassigned.forEach((s,i)=>{a[s.tracking_code]={emp:emps[i%emps.length],at:now};});
   }
   else if(method==='branch'){
-    // Group by branch then assign
     const branchMap={};
     apiShipments.forEach(s=>{
       const br=s.current_branch||'أخرى';
@@ -8784,17 +8784,16 @@ function autoAssign(method){
     const branches=Object.keys(branchMap);
     branches.forEach((br,bi)=>{
       const emp=emps[bi%emps.length];
-      branchMap[br].forEach(s=>{if(!a[s.tracking_code])a[s.tracking_code]=emp;});
+      branchMap[br].forEach(s=>{if(!flat[s.tracking_code])a[s.tracking_code]={emp,at:now};});
     });
   }
   else if(method==='workload'){
-    // Assign to employee with least current assignments
     const counts={};
     emps.forEach(e=>{counts[e]=0;});
-    Object.values(a).forEach(e=>{if(counts[e]!==undefined)counts[e]++;});
+    Object.values(flat).forEach(e=>{if(counts[e]!==undefined)counts[e]++;});
     unassigned.forEach(s=>{
       const emp=emps.reduce((a,b)=>counts[a]<=counts[b]?a:b);
-      a[s.tracking_code]=emp;
+      a[s.tracking_code]={emp,at:now};
       counts[emp]++;
     });
   }
@@ -8812,13 +8811,14 @@ function assignSelected(){
   if(!emp){toast('اختر موظفاً أولاً','w');return;}
   const selectedIds=getExplicitlySelectedApiIds();
   if(!selectedIds.length){toast('حدد الطرود عبر checkbox أولاً','w');return;}
-  const a=getAPIAssignments();
+  const a=_getAssignmentsRaw();
+  const now=Date.now();
   let count=0,blocked=0;
   selectedIds.forEach(sid=>{
     const s=apiShipments.find(x=>String(x.id)===String(sid));
     if(!s)return;
     if(!canAssignParcelToEmployee(s,emp)){blocked++;return;}
-    a[s.tracking_code]=emp;count++;
+    a[s.tracking_code]={emp,at:now};count++;
   });
   saveAPIAssignments(a);
   renderAPIShipments();
@@ -8833,11 +8833,12 @@ function bulkAssignFilteredBranch(){
   if(!emp){toast('اختر موظفاً أولاً','w');return;}
   const targets=apiFilteredData.filter(s=>!branch||String(s.current_branch||'')===branch);
   if(!targets.length){toast('لا توجد طرود مطابقة للفلتر الحالي','w');return;}
-  const a=getAPIAssignments();
+  const a=_getAssignmentsRaw();
+  const now=Date.now();
   let count=0,blocked=0;
   targets.forEach(s=>{
     if(!canAssignParcelToEmployee(s,emp)){blocked++;return;}
-    a[s.tracking_code]=emp;count++;
+    a[s.tracking_code]={emp,at:now};count++;
   });
   saveAPIAssignments(a);
   renderAPIShipments();
@@ -8850,7 +8851,7 @@ function bulkAssignFilteredBranch(){
 function unassignSelected(){
   const selectedIds=getExplicitlySelectedApiIds();
   if(!selectedIds.length){toast('حدد الطرود عبر checkbox أولاً','w');return;}
-  const a=getAPIAssignments();
+  const a=_getAssignmentsRaw();
   let count=0;
   selectedIds.forEach(sid=>{
     const s=apiShipments.find(x=>String(x.id)===String(sid));
