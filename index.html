@@ -8650,19 +8650,27 @@ function saveCommissionOverridesFromAdmin(){
 // Format: { "CODE": { emp: "حمزة", at: 1714060000000 }, ... }
 // Legacy format "CODE": "name" is auto-migrated on read.
 
+// Migrate legacy "name" → {emp,at} once, then persist so timestamps stay stable.
+let _assignCacheDirty=false;
 function _migrateAssignEntry(v){
   if(v&&typeof v==='object'&&v.emp)return v;
-  if(typeof v==='string')return {emp:v,at:Date.now()};
+  if(typeof v==='string'){_assignCacheDirty=true;return {emp:v,at:0};}
   return null;
 }
 // Internal: returns { CODE: {emp,at}, ... }
 function _getAssignmentsRaw(){
   try{
     const raw=JSON.parse(localStorage.getItem('api_assignments')||'{}');
+    _assignCacheDirty=false;
     const out={};
     for(const [k,v] of Object.entries(raw)){
       const m=_migrateAssignEntry(v);
       if(m&&m.emp)out[k]=m;
+    }
+    // Persist migration once so legacy entries get stable at:0 timestamps
+    if(_assignCacheDirty){
+      localStorage.setItem('api_assignments',JSON.stringify(out));
+      _assignCacheDirty=false;
     }
     return out;
   }catch{return {};}
@@ -8677,10 +8685,10 @@ function getAPIAssignments(){
 
 let _assignSyncTimer=null;
 let _assignSyncPending=null;
+let _assignRemoteHash='';
 
 function saveAPIAssignments(obj){
   localStorage.setItem('api_assignments',JSON.stringify(obj));
-  // Optimistic: UI already updated. Sync to Supabase in background.
   _assignSyncPending=obj;
   clearTimeout(_assignSyncTimer);
   _assignSyncTimer=setTimeout(()=>_flushAssignSync(),600);
@@ -8688,12 +8696,15 @@ function saveAPIAssignments(obj){
 async function _flushAssignSync(){
   const obj=_assignSyncPending;
   if(!obj)return;
+  const hash=JSON.stringify(obj);
+  // Skip upload if nothing changed since last sync
+  if(hash===_assignRemoteHash){_assignSyncPending=null;return;}
   try{
-    await sbUp('settings',[{key:'api_assignments',value:JSON.stringify(obj)}]);
+    await sbUp('settings',[{key:'api_assignments',value:hash}]);
+    _assignRemoteHash=hash;
     _assignSyncPending=null;
   }catch(e){
     console.warn('Assignment sync failed, will retry on reconnect:',e);
-    // Retry when connection comes back
     window.removeEventListener('online',_onlineRetryAssign);
     window.addEventListener('online',_onlineRetryAssign,{once:true});
   }
@@ -8706,14 +8717,16 @@ async function loadAssignmentsFromSupabase(){
   try{
     const rows=await sb('settings','GET',null,'?key=eq.api_assignments&select=value');
     if(rows&&rows[0]&&rows[0].value){
-      const remote=JSON.parse(rows[0].value);
+      const remoteRaw=JSON.parse(rows[0].value);
+      _assignRemoteHash=rows[0].value;
       const local=_getAssignmentsRaw();
-      // Merge with timestamp-based conflict resolution: newest wins
+      // Merge: timestamp-based conflict resolution (newest wins).
+      // Legacy entries have at:0, so any real assignment from another device wins.
       const merged={};
-      const allKeys=new Set([...Object.keys(local),...Object.keys(remote)]);
+      const allKeys=new Set([...Object.keys(local),...Object.keys(remoteRaw)]);
       for(const k of allKeys){
         const l=_migrateAssignEntry(local[k]);
-        const r=_migrateAssignEntry(remote[k]);
+        const r=_migrateAssignEntry(remoteRaw[k]);
         if(l&&r) merged[k]=(l.at||0)>=(r.at||0)?l:r;
         else if(l) merged[k]=l;
         else if(r) merged[k]=r;
