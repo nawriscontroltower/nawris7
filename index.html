@@ -1221,20 +1221,20 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       <div class="flt-drawer-head">
         <strong style="font-size:14px">تصفية التحويلات</strong>
         <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('t-q').value='';document.getElementById('t-st').value='';document.getElementById('t-branch').value='';renderTransfers();">✕ مسح</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('t-q').value='';document.getElementById('t-from-branch').value='';document.getElementById('t-to-branch').value='';document.getElementById('t-fdays').value='';renderTransfers();">✕ مسح</button>
           <button class="btn btn-ghost btn-sm" onclick="closeTransfersFiltersDrawer()">✕ إغلاق</button>
         </div>
       </div>
       <div class="flt-drawer-body">
         <input class="fi fi-grow" id="t-q" type="text" placeholder="🔍 بحث بالكود أو المسار..." oninput="renderTransfers()">
-        <select class="fi" id="t-st" onchange="renderTransfers()">
-          <option value="">كل الحالات</option>
-          <option value="delivered">تم التسليم</option>
-          <option value="delayed">متأخر</option>
-          <option value="pending">معلق</option>
-        </select>
-        <select class="fi" id="t-branch" onchange="renderTransfers()">
-          <option value="">كل الفروع</option>
+        <select class="fi" id="t-from-branch" onchange="renderTransfers()"></select>
+        <select class="fi" id="t-to-branch" onchange="renderTransfers()"></select>
+        <select class="fi" id="t-fdays" onchange="renderTransfers()">
+          <option value="">كل أيام التأخير</option>
+          <option value="0-2">0-2 أيام</option>
+          <option value="3-7">3-7 أيام</option>
+          <option value="8-15">8-15 يوم</option>
+          <option value="16+">+16 يوم</option>
         </select>
       </div>
     </aside>
@@ -4295,14 +4295,16 @@ function renderTransfers(){
   const container=document.getElementById('transfers-table');
   if(!container)return;
   const q=normalizeIdentityText(document.getElementById('t-q')?.value||'');
-  const statusFilter=(document.getElementById('t-st')?.value||'').toLowerCase();
-  const branchFilter=(document.getElementById('t-branch')?.value||'').trim();
-  const branchSel=document.getElementById('t-branch');
-  if(branchSel&&!branchSel.dataset.ready){
-    const options=[...new Set(transfers_data.flatMap(s=>[s.from_branch,s.to_branch]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ar'));
-    branchSel.innerHTML='<option value="">كل الفروع</option>'+options.map(b=>`<option>${b}</option>`).join('');
-    branchSel.dataset.ready='1';
-  }
+  const fromBranchFilter=(document.getElementById('t-from-branch')?.value||'').trim();
+  const toBranchFilter=(document.getElementById('t-to-branch')?.value||'').trim();
+  const daysFilter=(document.getElementById('t-fdays')?.value||'').trim();
+  // Build dynamic dropdowns
+  const fromSet=[...new Set(transfers_data.map(s=>String(s.from_branch||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const toSet=[...new Set(transfers_data.map(s=>String(s.to_branch||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const fromEl=document.getElementById('t-from-branch');
+  if(fromEl&&!fromBranchFilter)fromEl.innerHTML='<option value="">فرع المُرسل</option>'+fromSet.map(b=>`<option>${b}</option>`).join('');
+  const toEl=document.getElementById('t-to-branch');
+  if(toEl&&!toBranchFilter)toEl.innerHTML='<option value="">فرع المُستلم</option>'+toSet.map(b=>`<option>${b}</option>`).join('');
   const total=transfers_data.length;
   const way=transfers_data.filter(s=>getTransferStatusMeta(s.status).label==='بالطريق').length;
   const delayed=transfers_data.filter(s=>getTransferStatusMeta(s.status).label==='متأخر').length;
@@ -4330,18 +4332,20 @@ function renderTransfers(){
   sortedTripIds.forEach(tripId=>{
     const original=transferTripGroups[tripId]||[];
     const filtered=original.filter(s=>{
-      if(branchFilter&&String(s.from_branch||'')!==branchFilter&&String(s.to_branch||'')!==branchFilter)return false;
+      if(fromBranchFilter&&String(s.from_branch||'').trim()!==fromBranchFilter)return false;
+      if(toBranchFilter&&String(s.to_branch||'').trim()!==toBranchFilter)return false;
+      if(daysFilter){
+        const d=Number(s.delay_days||0)||0;
+        if(daysFilter==='0-2'&&d>2)return false;
+        if(daysFilter==='3-7'&&(d<3||d>7))return false;
+        if(daysFilter==='8-15'&&(d<8||d>15))return false;
+        if(daysFilter==='16+'&&d<16)return false;
+      }
       if(q){
         const txt=normalizeIdentityText(`${s.shipment_code||''} ${s.customer_name||''} ${s.branch||''} ${s.from_branch||''} ${s.to_branch||''}`);
         if(!txt.includes(q))return false;
       }
-      if(!statusFilter)return true;
-      const meta=getTransferStatusMeta(s.status);
-      if(statusFilter==='pending')return meta.label==='معلق';
-      return meta.label===(
-        statusFilter==='delivered'?'تم التسليم':
-        statusFilter==='delayed'?'متأخر':''
-      );
+      return true;
     });
     if(!filtered.length)return;
     renderedTrips++;
