@@ -1284,8 +1284,8 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
     <div class="fbar">
       <button class="btn btn-ghost btn-sm" onclick="openApiFiltersDrawer()">⚙️ تصفية</button>
       <label class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;cursor:pointer">
-        <input type="checkbox" id="a-show-processed" checked onchange="renderAPIShipments()">
-        إظهار المعالَجة
+        <input type="checkbox" id="a-show-processed" onchange="renderAPIShipments()">
+        إظهار المعالَجة فقط
       </label>
     </div>
     <div class="flt-drawer-overlay" id="api-filters-overlay" onclick="closeApiFiltersDrawer()"></div>
@@ -6902,21 +6902,22 @@ function renderAPIShipments(){
     list=list.filter(s=>String(assignments[s.tracking_code]||'')===String(myName));
   }
   // ── "إظهار المعالَجة" Toggle Logic ──
-  // Checked  → show everything (transparent mode).
-  // Unchecked → hide delivered/processed + session-changed codes.
-  // Exceptions that ALWAYS bypass this filter:
-  //   1. returned shipments (need follow-up)
-  //   2. active search query (user is looking for something specific)
-  //   3. manual status filter selected (user's filter choice takes priority)
+  // Checked  → show ONLY processed/delivered shipments.
+  // Unchecked → hide processed/delivered (default — show active shipments).
+  // Bypass: search query or manual status filter take priority.
   const manualStatusFilter=Boolean(fst);
-  if(!showProcessed&&!manualStatusFilter&&!hasExplicitQuery){
-    const hiddenStatuses=new Set(['delivered','processed']);
-    list=list.filter(s=>{
-      if(s.status==='returned')return true;
-      if(hiddenStatuses.has(s.status))return false;
-      if(apiProcessedCodes.has(String(s.tracking_code||'')))return false;
-      return true;
-    });
+  const processedStatuses=new Set(['delivered','processed']);
+  if(!manualStatusFilter&&!hasExplicitQuery){
+    if(showProcessed){
+      list=list.filter(s=>processedStatuses.has(s.status)||apiProcessedCodes.has(String(s.tracking_code||'')));
+    }else{
+      list=list.filter(s=>{
+        if(s.status==='returned')return true;
+        if(processedStatuses.has(s.status))return false;
+        if(apiProcessedCodes.has(String(s.tracking_code||'')))return false;
+        return true;
+      });
+    }
   }
 
   // Segment filter
