@@ -2665,6 +2665,7 @@ async function loadAll(){
     });
     buildDropdowns();refreshAll();
     setSyncState('ok','متصل');
+    loadAssignmentsFromSupabase().then(()=>{renderAPIShipments();renderAssignStats();}).catch(()=>{});
     loadReturns();loadTransfers();loadDbStats();
     buildJanzourSet(); // Sync Janzour store set from Supabase stores table
   }catch(e){setSyncState('err','خطأ');toast('خطأ في التحميل: '+e.message,'e');}
@@ -8648,7 +8649,43 @@ function saveCommissionOverridesFromAdmin(){
 function getAPIAssignments(){
   try{return JSON.parse(localStorage.getItem('api_assignments')||'{}');}catch{return {};}
 }
-function saveAPIAssignments(obj){localStorage.setItem('api_assignments',JSON.stringify(obj));}
+function saveAPIAssignments(obj){
+  localStorage.setItem('api_assignments',JSON.stringify(obj));
+  // Sync to Supabase so all devices share the same assignments
+  syncAssignmentsToSupabase(obj);
+}
+let _assignSyncTimer=null;
+function syncAssignmentsToSupabase(obj){
+  clearTimeout(_assignSyncTimer);
+  _assignSyncTimer=setTimeout(async()=>{
+    try{
+      const val=JSON.stringify(obj);
+      // Upsert into settings table
+      await fetch(`${SB}/rest/v1/settings?key=eq.api_assignments`,{
+        method:'DELETE',headers:H
+      });
+      await fetch(`${SB}/rest/v1/settings`,{
+        method:'POST',
+        headers:{...H,'Prefer':'return=minimal'},
+        body:JSON.stringify({key:'api_assignments',value:val})
+      });
+    }catch(e){console.warn('Assignment sync failed:',e);}
+  },500);
+}
+async function loadAssignmentsFromSupabase(){
+  try{
+    const rows=await sb('settings','GET',null,'?key=eq.api_assignments&select=value');
+    if(rows&&rows[0]&&rows[0].value){
+      const remote=JSON.parse(rows[0].value);
+      const local=getAPIAssignments();
+      // Merge: remote wins for conflicts, keep local additions
+      const merged={...local,...remote};
+      localStorage.setItem('api_assignments',JSON.stringify(merged));
+      return merged;
+    }
+  }catch(e){console.warn('Failed to load assignments from Supabase:',e);}
+  return getAPIAssignments();
+}
 
 function setAssignedTo(code,empName){
   const a=getAPIAssignments();
