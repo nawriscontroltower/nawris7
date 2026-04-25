@@ -1115,9 +1115,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
     </div>
     <div class="branch-kpis">
       <div class="branch-kpi total"><div>إجمالي الشحنات</div><strong id="r-kpi-total">0</strong></div>
-      <div class="branch-kpi pending"><div>بالطريق</div><strong id="r-kpi-way">0</strong></div>
-      <div class="branch-kpi delayed"><div>متأخر</div><strong id="r-kpi-delayed">0</strong></div>
-      <div class="branch-kpi delivered"><div>تم التسليم</div><strong id="r-kpi-delivered">0</strong></div>
+      <div class="branch-kpi delivered" id="r-show-processed-mode" style="cursor:pointer" onclick="toggleRetProcessed()"><div>تمت المعالجة</div><strong id="r-kpi-processed">0</strong></div>
     </div>
     <div class="fbar branch-filters sticky">
       <button class="btn btn-ghost btn-sm" onclick="openReturnsFiltersDrawer()">⚙️ تصفية</button>
@@ -4018,12 +4016,22 @@ function renderReturns(){
     const cmp=String(av).localeCompare(String(bv),'ar',{numeric:true,sensitivity:'base'});
     return rSortDir==='asc'?cmp:-cmp;
   });
-  const total=returns_data.length;
-  const onWay=returns_data.filter(r=>String(r.location||'')==='with_driver').length;
-  const delayed=returns_data.filter(r=>(Number(r?.delay_days||0)||0)>=3).length;
-  const delivered=returns_data.filter(r=>String(r.location||'')==='returned_to_store').length;
+  // Split into active vs processed
+  const isRetProcessed=(r)=>{
+    const tc=r.shipments?.tracking_code||'';
+    const cr=getCR('ret_'+tc);
+    return cr.result==='solved'||cr.result==='contacted';
+  };
+  const activeList=list.filter(r=>!isRetProcessed(r));
+  const processedList=list.filter(r=>isRetProcessed(r));
+  const showProcessedRet=!!document.getElementById('r-show-processed-mode')?.dataset?.active;
+
   const setTxt=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=String(val);};
-  setTxt('r-kpi-total',total);setTxt('r-kpi-way',onWay);setTxt('r-kpi-delayed',delayed);setTxt('r-kpi-delivered',delivered);
+  setTxt('r-kpi-total',activeList.length);
+  setTxt('r-kpi-processed',processedList.length);
+
+  // Show active or processed based on toggle
+  list=showProcessedRet?processedList:activeList;
 
   // Render table
   const tbody=document.getElementById('returns-tbody');
@@ -4093,6 +4101,19 @@ function waReturnRow(tc,target){
     const msg=`السلام عليكم ${r.drivers?.name||''} 👋\n🕊️ ${CFG.company}\n\nيوجد طرد في الشركة بانتظار التوصيل:\n📦 كود: ${tc}\n👤 العميل: ${r.shipments?.customer_name||'—'}\n📱 هاتف: ${r.shipments?.customer_phone||'—'}\n🏢 الفرع: ${r.branch||'—'}\n⏱️ التأخير: ${days} يوم\n\nيرجى الاستلام والتوصيل\n— ${CFG.company}`;
     openWAUrl(ph,msg);
   }
+}
+function toggleRetProcessed(){
+  const el=document.getElementById('r-show-processed-mode');
+  if(!el)return;
+  const isActive=!!el.dataset.active;
+  if(isActive){
+    delete el.dataset.active;
+    el.style.outline='';
+  }else{
+    el.dataset.active='1';
+    el.style.outline='2px solid var(--pur)';
+  }
+  renderReturns();
 }
 function sendBranchWA(){
   const brName=document.getElementById('r-wa-branch')?.value;
