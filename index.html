@@ -7754,7 +7754,7 @@ function updateJAssignLiveCounter(){
   el.textContent=`${emp} (${c[emp]||0} طرد)`;
 }
 function updateJanzourAssignControls(){
-  const emps=Object.values(USERS).filter(u=>u.status!=='inactive'&&u.name).map(u=>u.name);
+  const emps=Object.values(USERS).filter(u=>u.status!=='inactive'&&u.role!=='manager'&&u.name).map(u=>u.name);
   const counts=getJanzourAssignCounts();
   const fill=(id,placeholder)=>{
     const sel=document.getElementById(id); if(!sel)return;
@@ -8711,11 +8711,28 @@ function saveUser(){
 
 function deleteUser(k){
   if(CU&&CU.username===k){toast('لا يمكنك حذف حسابك الحالي!','w');return;}
-  if(!confirm('هل أنت متأكد من حذف المستخدم: '+(USERS[k]?.name||k)+'؟')) return;
+  const userName=USERS[k]?.name||k;
+  if(!confirm('هل أنت متأكد من حذف المستخدم: '+userName+'؟\nسيتم إزالة جميع تعييناته وبياناته.')) return;
+  // Remove all assignments for this user
+  const a=_getAssignmentsRaw();
+  let removed=0;
+  for(const [code,entry] of Object.entries(a)){
+    if(entry.emp===userName){delete a[code];removed++;}
+  }
+  if(removed>0)saveAPIAssignments(a);
+  // Remove contact results created by this user
+  (contact_results_db||[]).forEach(cr=>{
+    if(cr.updated_by===userName){
+      cr.updated_by='';
+    }
+  });
+  // Delete user
   delete USERS[k];
   saveUsers(USERS);
   renderUsersPage();
-  toast('🗑️ تم حذف المستخدم','s');
+  renderAPIShipments();
+  renderAssignStats();
+  toast(`🗑️ تم حذف ${userName} وإزالة ${removed} تعيين`,'s');
 }
 
 // ══════════════════════════════════════════
@@ -9410,8 +9427,8 @@ function openAssignPanel(){
 
 function refreshAssignPanelEmps(){
   const a=getAPIAssignments();
-  // Get all users (active or no status field)
-  const emps=Object.values(USERS).filter(u=>u.status!=='inactive'&&u.name);
+  // Get all employees (exclude manager — never assign to manager)
+  const emps=Object.values(USERS).filter(u=>u.status!=='inactive'&&u.role!=='manager'&&u.name);
   if(!emps.length){
     const checksEl=document.getElementById('assign-emp-checks');
     if(checksEl)checksEl.innerHTML='<span style="color:var(--mute);font-size:11px">لا يوجد موظفون — أضف من تبويب المستخدمون</span>';
