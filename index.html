@@ -1074,17 +1074,43 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
   <div class="page" id="tab-drivers">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div style="font-size:18px;font-weight:800">👤 المناديب</div>
-      <button class="btn btn-wa btn-sm" onclick="sendAllDrivers()">💬 واتساب للكل</button>
     </div>
-    <div class="fbar">
-      <input class="fi fi-grow" id="d-q" type="text" placeholder="🔍 بحث..." oninput="renderDrivers()">
+    <!-- KPI -->
+    <div class="kgrid" style="margin-bottom:16px">
+      <div class="kcard pur"><div class="klbl">إجمالي المناديب</div><div class="kval" id="dk-total">0</div></div>
+      <div class="kcard red"><div class="klbl">حرج +15 يوم</div><div class="kval" id="dk-crit">0</div></div>
+      <div class="kcard gold"><div class="klbl">تحذير</div><div class="kval" id="dk-warn">0</div></div>
+      <div class="kcard grn"><div class="klbl">طبيعي</div><div class="kval" id="dk-ok">0</div></div>
+    </div>
+    <!-- Filters -->
+    <div class="fbar" style="margin-bottom:12px">
+      <input class="fi fi-grow" id="d-q" type="text" placeholder="🔍 بحث بالاسم أو الفرع..." oninput="renderDrivers()">
       <select class="fi" id="d-fs" onchange="renderDrivers()">
-        <option value="delay">الأعلى تأخراً</option>
-        <option value="parcels">الأكثر طروداً</option>
+        <option value="crit">الأعلى حرجاً</option>
+        <option value="total">الأكثر طروداً</option>
+        <option value="name">الاسم</option>
       </select>
     </div>
-    <div id="d-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
-      <div style="grid-column:1/-1;text-align:center;padding:36px;color:var(--mute)">ارفع بيانات الطرود أولاً</div>
+    <!-- Table -->
+    <div style="background:var(--bg3);border:1px solid var(--rim);border-radius:var(--r);overflow:hidden">
+      <div class="tw">
+        <table>
+          <thead><tr>
+            <th>#</th>
+            <th>المندوب</th>
+            <th>الهاتف</th>
+            <th>الفرع</th>
+            <th>إجمالي</th>
+            <th style="color:var(--red)">حرج</th>
+            <th style="color:var(--gold)">تحذير</th>
+            <th style="color:var(--grn)">موعد</th>
+            <th>↩️ مرتجع</th>
+            <th>نسبة التسليم</th>
+            <th>واتساب</th>
+          </tr></thead>
+          <tbody id="d-tbody"><tr><td colspan="11" style="text-align:center;padding:36px;color:var(--mute)">جارٍ التحميل...</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -3837,60 +3863,70 @@ function rrow(l,v){return`<div class="sd-row"><span class="sd-row-l">${l}</span>
 // ══════════════════════════════════════════
 function renderDrivers(){
   const q=(document.getElementById('d-q')?.value||'').toLowerCase();
-  const fs=document.getElementById('d-fs')?.value||'delay';
+  const fs=document.getElementById('d-fs')?.value||'crit';
   const stats={};
-  shipments.forEach(s=>{
-    const n=s.driver_name||'—';
-    if(!stats[n])stats[n]={name:n,phone:s.driver_phone||'',region:s.region_name||'',branch:s.branch_name||'',total:0,crit:0,warn:0,ok:0,maxD:0};
-    const st=stats[n];st.total++;const c=cls(s.delay_days);st[c]++;if(s.delay_days>st.maxD)st.maxD=s.delay_days;
+  // Build stats from API shipments (primary source)
+  apiShipments.forEach(s=>{
+    const n=s.captain||'غير محدد';
+    if(!n||n==='غير محدد')return;
+    if(!stats[n])stats[n]={name:n,phone:'',branch:'',total:0,crit:0,warn:0,ok:0,returned:0,maxD:0};
+    const st=stats[n];
+    st.total++;
+    const c=cls(s.delay_days);st[c]++;
+    if(s.delay_days>st.maxD)st.maxD=s.delay_days;
+    if(s.status==='returned')st.returned++;
+    if(!st.branch&&s.current_branch)st.branch=s.current_branch;
+    if(!st.phone&&s.captain_phone)st.phone=s.captain_phone;
   });
-  drivers_db.forEach(d=>{if(!stats[d.name])stats[d.name]={name:d.name,phone:d.phone||'',region:'',branch:'',total:0,crit:0,warn:0,ok:0,maxD:0};if(!stats[d.name].phone)stats[d.name].phone=d.phone||'';});
+  // Enrich phones from drivers_db
+  drivers_db.forEach(d=>{
+    if(stats[d.name]&&!stats[d.name].phone)stats[d.name].phone=d.phone||'';
+  });
+  // Filter
   let list=Object.values(stats).filter(d=>{
-    if(q&&!`${d.name} ${d.region} ${d.branch}`.toLowerCase().includes(q))return false;
+    if(q&&!`${d.name} ${d.branch} ${d.phone}`.toLowerCase().includes(q))return false;
     return true;
   });
-  if(fs==='delay')list.sort((a,b)=>b.maxD-a.maxD);
-  else list.sort((a,b)=>b.total-a.total);
-  const AV=['linear-gradient(135deg,#9b6dff,#4f8aff)','linear-gradient(135deg,#ff3a5c,#ff7c2a)','linear-gradient(135deg,#22d896,#4f8aff)','linear-gradient(135deg,#f5c842,#ff7c2a)','linear-gradient(135deg,#ff7c2a,#9b6dff)'];
-  const grid=document.getElementById('d-grid');
-  if(!list.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:36px;color:var(--mute)">لا بيانات</div>';return;}
-  grid.innerHTML=list.map((d,i)=>{
-    const rate=d.total?Math.round(d.ok/d.total*100):0;
-    const rc=rate>70?'var(--grn)':rate>40?'var(--gold)':'var(--red)';
+  // Sort
+  if(fs==='crit')list.sort((a,b)=>b.crit-a.crit||b.maxD-a.maxD);
+  else if(fs==='total')list.sort((a,b)=>b.total-a.total);
+  else list.sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  // KPIs
+  const setTxt=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  setTxt('dk-total',list.length);
+  setTxt('dk-crit',list.filter(d=>d.crit>0).length);
+  setTxt('dk-warn',list.filter(d=>d.crit===0&&d.warn>0).length);
+  setTxt('dk-ok',list.filter(d=>d.crit===0&&d.warn===0).length);
+  // Render table
+  const tbody=document.getElementById('d-tbody');
+  if(!tbody)return;
+  if(!list.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:36px;color:var(--mute)">لا توجد بيانات — اجلب طرود API أولاً</td></tr>';return;}
+  tbody.innerHTML=list.map((d,i)=>{
+    const pct=d.total?Math.round(d.ok/d.total*100):0;
+    const pc=pct>70?'var(--grn)':pct>40?'var(--gold)':'var(--red)';
     const ph=normPhone(d.phone);
-    const sn=d.name.replace(/"/g,'&quot;');
-    return`<div class="cc">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div class="cc-av" style="background:${AV[i%AV.length]}">${d.name[0]}</div>
-        <div style="flex:1;overflow:hidden">
-          <div style="font-weight:800;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name}</div>
-          <div style="font-size:11px;color:var(--mute)">${d.region}${d.branch?' • '+d.branch:''}</div>
-          <div style="font-size:10px;color:var(--dim);font-family:var(--mono)">${d.phone||'—'}</div>
-        </div>
-        <span class="badge ${d.crit>0?'b-red':d.warn>0?'b-gold':'b-grn'}">${d.crit>0?'حرج':d.warn>0?'تحذير':'طبيعي'}</span>
-      </div>
-      <div class="cc-stats">
-        <div class="cc-stat"><div class="cc-sv" style="color:var(--gold)">${d.total}</div><div style="font-size:10px;color:var(--mute)">طرد</div></div>
-        <div class="cc-stat"><div class="cc-sv" style="color:var(--red)">${d.crit}</div><div style="font-size:10px;color:var(--mute)">حرج</div></div>
-        <div class="cc-stat"><div class="cc-sv" style="color:${rc}">${rate}%</div><div style="font-size:10px;color:var(--mute)">موعد</div></div>
-      </div>
-      <div style="background:var(--bg5);border-radius:99px;height:5px;overflow:hidden;margin-bottom:10px"><div style="width:${rate}%;height:100%;background:${rc};border-radius:99px"></div></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-wa btn-sm" data-ca="wa" data-cn="${sn}" data-ph="${ph}">💬 واتساب</button>
-        <button class="btn btn-ghost btn-sm" data-ca="ct" data-cn="${sn}">✅ تم التواصل</button>
-      </div>
-    </div>`;
+    const sn=d.name.replace(/'/g,"\\'");
+    return `<tr style="${d.crit>0?'background:rgba(255,58,92,.04)':''}">
+      <td style="color:var(--dim);font-size:10px;text-align:center">${i+1}</td>
+      <td style="font-weight:700">${d.name}</td>
+      <td style="font-family:var(--mono);font-size:11px;direction:ltr">${d.phone||'—'}</td>
+      <td style="font-size:11px;color:var(--mute)">${d.branch||'—'}</td>
+      <td style="font-weight:600">${d.total}</td>
+      <td style="color:var(--red);font-weight:800">${d.crit}</td>
+      <td style="color:var(--gold)">${d.warn}</td>
+      <td style="color:var(--grn)">${d.ok}</td>
+      <td style="color:var(--orn)">${d.returned}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div style="background:var(--bg5);border-radius:99px;height:5px;flex:1;overflow:hidden"><div style="width:${pct}%;height:100%;background:${pc};border-radius:99px"></div></div><span style="font-size:11px;color:${pc};font-weight:700;min-width:30px">${pct}%</span></div></td>
+      <td>${ph?`<button class="btn btn-wa btn-sm" onclick="sendToDriverAPI('${sn}','${ph}')" style="font-size:10px;padding:3px 8px">💬</button>`:'—'}</td>
+    </tr>`;
   }).join('');
-  if(!grid._del){
-    grid._del=true;
-    grid.addEventListener('click',e=>{
-      const btn=e.target.closest('[data-ca]');if(!btn)return;
-      e.stopPropagation();
-      const a=btn.dataset.ca,n=btn.dataset.cn||'',ph=btn.dataset.ph||'';
-      if(a==='wa')sendToDriver(n,ph);
-      if(a==='ct')markDriverCt(n);
-    });
-  }
+}
+function sendToDriverAPI(name,phone){
+  const parcels=apiShipments.filter(s=>(s.captain||'')===name);
+  const critList=parcels.filter(s=>cls(s.delay_days)==='critical');
+  const codes=critList.slice(0,10).map(s=>s.tracking_code).join('\n');
+  const msg=`السلام عليكم ${name} 👋\n🕊️ ${CFG.company}\n\nلديك ${parcels.length} طرد (${critList.length} حرج)\n\n${codes?'أكواد الحرجة:\n'+codes+'\n\n':''}⚠️ يرجى المتابعة\n— ${CFG.company}`;
+  openWAUrl(phone,msg);
 }
 
 // ══════════════════════════════════════════
