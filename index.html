@@ -1107,6 +1107,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
             <th>↩️ مرتجع</th>
             <th>نسبة التسليم</th>
             <th>واتساب</th>
+            <th>تعديل</th>
           </tr></thead>
           <tbody id="d-tbody"><tr><td colspan="11" style="text-align:center;padding:36px;color:var(--mute)">جارٍ التحميل...</td></tr></tbody>
         </table>
@@ -3900,7 +3901,7 @@ function renderDrivers(){
   // Render table
   const tbody=document.getElementById('d-tbody');
   if(!tbody)return;
-  if(!list.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:36px;color:var(--mute)">لا توجد بيانات — اجلب طرود API أولاً</td></tr>';return;}
+  if(!list.length){tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:36px;color:var(--mute)">لا توجد بيانات — اجلب طرود API أولاً</td></tr>';return;}
   tbody.innerHTML=list.map((d,i)=>{
     const pct=d.total?Math.round(d.ok/d.total*100):0;
     const pc=pct>70?'var(--grn)':pct>40?'var(--gold)':'var(--red)';
@@ -3918,8 +3919,71 @@ function renderDrivers(){
       <td style="color:var(--orn)">${d.returned}</td>
       <td><div style="display:flex;align-items:center;gap:6px"><div style="background:var(--bg5);border-radius:99px;height:5px;flex:1;overflow:hidden"><div style="width:${pct}%;height:100%;background:${pc};border-radius:99px"></div></div><span style="font-size:11px;color:${pc};font-weight:700;min-width:30px">${pct}%</span></div></td>
       <td>${ph?`<button class="btn btn-wa btn-sm" onclick="sendToDriverAPI('${sn}','${ph}')" style="font-size:10px;padding:3px 8px">💬</button>`:'—'}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="editDriverInfo('${sn}')" style="font-size:10px;padding:3px 8px">✏️</button></td>
     </tr>`;
   }).join('');
+}
+function editDriverInfo(captainName){
+  const existing=drivers_db.find(d=>d.name===captainName)||{};
+  const currentPhone=existing.phone||'';
+  const html=`<div style="padding:20px">
+    <div style="font-size:16px;font-weight:800;margin-bottom:16px">✏️ تعديل بيانات المندوب</div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--mute);display:block;margin-bottom:4px">الاسم في API</label>
+      <input class="fi" id="edit-drv-api-name" value="${captainName}" readonly style="width:100%;opacity:.6">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--mute);display:block;margin-bottom:4px">الاسم الصحيح (اتركه فارغ إذا الاسم صحيح)</label>
+      <input class="fi" id="edit-drv-name" value="${existing.name||captainName}" style="width:100%" placeholder="الاسم الصحيح...">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--mute);display:block;margin-bottom:4px">رقم الهاتف الصحيح</label>
+      <input class="fi" id="edit-drv-phone" value="${currentPhone}" style="width:100%;direction:ltr" placeholder="09XXXXXXXX">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-pur btn-sm" style="flex:1" onclick="saveDriverEdit()">💾 حفظ</button>
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="closeM('drv-edit-modal')">إلغاء</button>
+    </div>
+  </div>`;
+  let modal=document.getElementById('drv-edit-modal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='drv-edit-modal';
+    modal.className='modal-wrap';
+    modal.innerHTML='<div class="modal-box" style="max-width:380px"></div>';
+    modal.onclick=e=>{if(e.target===modal)closeM('drv-edit-modal');};
+    document.body.appendChild(modal);
+  }
+  modal.querySelector('.modal-box').innerHTML=html;
+  modal.classList.add('on');
+}
+async function saveDriverEdit(){
+  const apiName=document.getElementById('edit-drv-api-name')?.value?.trim();
+  const newName=document.getElementById('edit-drv-name')?.value?.trim()||apiName;
+  const newPhone=document.getElementById('edit-drv-phone')?.value?.trim();
+  if(!apiName){toast('خطأ','e');return;}
+  // Find or create in drivers_db
+  let drv=drivers_db.find(d=>d.name===apiName);
+  if(drv){
+    drv.phone=newPhone||drv.phone;
+    if(newName!==apiName)drv.alias=apiName; // keep API name as alias
+  }else{
+    drv={name:newName||apiName,phone:newPhone||'',alias:apiName!==newName?apiName:''};
+    drivers_db.push(drv);
+  }
+  // Save to Supabase
+  try{
+    await sbUp('drivers',[{name:newName||apiName,phone:newPhone||''}]);
+    toast(`✅ تم حفظ بيانات ${newName||apiName}`,'s');
+  }catch(e){toast('خطأ في الحفظ: '+e.message,'e');}
+  // Update captain_phone in apiShipments for immediate effect
+  apiShipments.forEach(s=>{
+    if(s.captain===apiName&&newPhone)s.captain_phone=newPhone;
+  });
+  closeM('drv-edit-modal');
+  renderDrivers();
+  enrichAPICaptainPhones();
+  renderAPIShipments();
 }
 function sendToDriverAPI(name,phone){
   const parcels=apiShipments.filter(s=>(s.captain||'')===name);
