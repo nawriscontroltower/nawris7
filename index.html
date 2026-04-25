@@ -1168,14 +1168,14 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <table>
           <thead><tr>
             <th>#</th>
-            <th>الكود</th>
-            <th>العميل</th>
-            <th>المندوب</th>
-            <th>الفرع</th>
-            <th>الموقع</th>
-            <th>التأخير</th>
-            <th>نتيجة التواصل</th>
-            <th>ملاحظة</th>
+            <th onclick="setReturnsSort('tracking_code')" style="cursor:pointer;user-select:none">الكود <span id="r-sort-tracking_code">↕</span></th>
+            <th onclick="setReturnsSort('customer_name')" style="cursor:pointer;user-select:none">العميل <span id="r-sort-customer_name">↕</span></th>
+            <th onclick="setReturnsSort('driver_name')" style="cursor:pointer;user-select:none">المندوب <span id="r-sort-driver_name">↕</span></th>
+            <th onclick="setReturnsSort('branch')" style="cursor:pointer;user-select:none">الفرع <span id="r-sort-branch">↕</span></th>
+            <th onclick="setReturnsSort('location')" style="cursor:pointer;user-select:none">الموقع <span id="r-sort-location">↕</span></th>
+            <th onclick="setReturnsSort('delay_days')" style="cursor:pointer;user-select:none">التأخير <span id="r-sort-delay_days">↓</span></th>
+            <th onclick="setReturnsSort('cr_result')" style="cursor:pointer;user-select:none">نتيجة التواصل <span id="r-sort-cr_result">↕</span></th>
+            <th onclick="setReturnsSort('note')" style="cursor:pointer;user-select:none">ملاحظة <span id="r-sort-note">↕</span></th>
             <th>واتساب</th>
           </tr></thead>
           <tbody id="returns-tbody"><tr><td colspan="10" style="text-align:center;padding:36px;color:var(--mute)">لا توجد بيانات</td></tr></tbody>
@@ -1242,9 +1242,9 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
     </aside>
     <div class="tr-wrap">
       <div class="tr-head">
-        <div>الرحلة</div>
-        <div>العدد</div>
-        <div>الحالة</div>
+        <div onclick="setTransfersSort('route')" style="cursor:pointer;user-select:none">الرحلة <span id="t-sort-route">↓</span></div>
+        <div onclick="setTransfersSort('count')" style="cursor:pointer;user-select:none">العدد <span id="t-sort-count">↕</span></div>
+        <div onclick="setTransfersSort('status')" style="cursor:pointer;user-select:none">الحالة <span id="t-sort-status">↕</span></div>
       </div>
       <div id="transfers-table" aria-live="polite">
         <div class="tr-empty">لا تحويلات</div>
@@ -2346,6 +2346,10 @@ let staffSection='performance';
 let PER=25;
 let sSortKey='delay_days';
 let sSortDir='desc';
+let rSortKey='delay_days';
+let rSortDir='desc';
+let tSortKey='route';
+let tSortDir='asc';
 let autoFetchTimer=null;
 let staffLogState={packageId:'',trackingCode:'',storeName:'',all:[],shown:5};
 let CFG={critDays:3,warnDays:2,discount:50,company:'النورس للشحن',mgrPhone:''};
@@ -3896,6 +3900,31 @@ function renderDrivers(){
 // RETURNS
 // ══════════════════════════════════════════
 function getReturnLocs(){return getAllReturnStatuses().map(s=>s.key);}
+function getReturnsSortArrow(key){
+  if(rSortKey!==key)return '↕';
+  return rSortDir==='asc'?'↑':'↓';
+}
+function updateReturnsSortHeaderIcons(){
+  const map={
+    tracking_code:'r-sort-tracking_code',
+    customer_name:'r-sort-customer_name',
+    driver_name:'r-sort-driver_name',
+    branch:'r-sort-branch',
+    location:'r-sort-location',
+    delay_days:'r-sort-delay_days',
+    cr_result:'r-sort-cr_result',
+    note:'r-sort-note'
+  };
+  Object.entries(map).forEach(([k,id])=>{
+    const el=document.getElementById(id);
+    if(el)el.textContent=getReturnsSortArrow(k);
+  });
+}
+function setReturnsSort(key){
+  if(rSortKey===key)rSortDir=rSortDir==='asc'?'desc':'asc';
+  else{rSortKey=key;rSortDir='asc';}
+  renderReturns();
+}
 function renderReturns(){
   const q=normalizeIdentityText(document.getElementById('r-q')?.value||'');
   const loc=document.getElementById('r-loc')?.value||'';
@@ -3909,6 +3938,7 @@ function renderReturns(){
   const locMap={with_driver:'مع المندوب',in_warehouse:'في الشركة',returned_to_store:'تسليم للمتجر'};
   customRS.forEach(s=>{const key=s.label.replace(/\s+/g,'_').toLowerCase();locMap[key]=s.label;});
   const rsnMap={customer_refused:'رفض العميل',wrong_address:'عنوان خاطئ',no_answer:'لا يرد',damaged:'تالف'};
+  updateReturnsSortHeaderIcons();
 
   // Build all dropdown options dynamically from data
   const locEl=document.getElementById('r-loc');
@@ -3952,6 +3982,41 @@ function renderReturns(){
       if(!text.includes(q))return false;
     }
     return true;
+  });
+  list.sort((a,b)=>{
+    const aCode=String(a.shipments?.tracking_code||'').trim();
+    const bCode=String(b.shipments?.tracking_code||'').trim();
+    const aCr=getCR('ret_'+aCode);
+    const bCr=getCR('ret_'+bCode);
+    const aLoc=String(locMap[a.location]||a.location||'—').trim();
+    const bLoc=String(locMap[b.location]||b.location||'—').trim();
+    const av=(()=>{
+      if(rSortKey==='tracking_code')return aCode;
+      if(rSortKey==='customer_name')return String(a.shipments?.customer_name||'').trim();
+      if(rSortKey==='driver_name')return String(a.drivers?.name||'').trim();
+      if(rSortKey==='branch')return String(a.branch||a.branches?.name||'').trim();
+      if(rSortKey==='location')return aLoc;
+      if(rSortKey==='delay_days')return Number(a.delay_days||0);
+      if(rSortKey==='cr_result')return String(aCr.result||'');
+      if(rSortKey==='note')return String(aCr.note||'');
+      return Number(a.delay_days||0);
+    })();
+    const bv=(()=>{
+      if(rSortKey==='tracking_code')return bCode;
+      if(rSortKey==='customer_name')return String(b.shipments?.customer_name||'').trim();
+      if(rSortKey==='driver_name')return String(b.drivers?.name||'').trim();
+      if(rSortKey==='branch')return String(b.branch||b.branches?.name||'').trim();
+      if(rSortKey==='location')return bLoc;
+      if(rSortKey==='delay_days')return Number(b.delay_days||0);
+      if(rSortKey==='cr_result')return String(bCr.result||'');
+      if(rSortKey==='note')return String(bCr.note||'');
+      return Number(b.delay_days||0);
+    })();
+    if(typeof av==='number'&&typeof bv==='number'){
+      return rSortDir==='asc'?av-bv:bv-av;
+    }
+    const cmp=String(av).localeCompare(String(bv),'ar',{numeric:true,sensitivity:'base'});
+    return rSortDir==='asc'?cmp:-cmp;
   });
   const total=returns_data.length;
   const onWay=returns_data.filter(r=>String(r.location||'')==='with_driver').length;
@@ -4188,6 +4253,22 @@ function createTripChildren(tripId,tripShipments){
   children.appendChild(frag);
   return children;
 }
+function getTransfersSortArrow(key){
+  if(tSortKey!==key)return '↕';
+  return tSortDir==='asc'?'↑':'↓';
+}
+function updateTransfersSortHeaderIcons(){
+  const map={route:'t-sort-route',count:'t-sort-count',status:'t-sort-status'};
+  Object.entries(map).forEach(([k,id])=>{
+    const el=document.getElementById(id);
+    if(el)el.textContent=getTransfersSortArrow(k);
+  });
+}
+function setTransfersSort(key){
+  if(tSortKey===key)tSortDir=tSortDir==='asc'?'desc':'asc';
+  else{tSortKey=key;tSortDir='asc';}
+  renderTransfers();
+}
 
 function renderTransfers(){
   const container=document.getElementById('transfers-table');
@@ -4207,10 +4288,25 @@ function renderTransfers(){
   const delivered=transfers_data.filter(s=>getTransferStatusMeta(s.status).label==='تم التسليم').length;
   const setTxt=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=String(val);};
   setTxt('t-kpi-total',total);setTxt('t-kpi-way',way);setTxt('t-kpi-delayed',delayed);setTxt('t-kpi-delivered',delivered);
+  updateTransfersSortHeaderIcons();
   const frag=document.createDocumentFragment();
   let renderedTrips=0;
-
-  transferTripOrder.forEach(tripId=>{
+  const sortedTripIds=[...transferTripOrder].sort((a,b)=>{
+    const rowsA=transferTripGroups[a]||[];
+    const rowsB=transferTripGroups[b]||[];
+    const firstA=rowsA[0]||{};
+    const firstB=rowsB[0]||{};
+    const statusA=getTransferStatusMeta(firstA.status).label;
+    const statusB=getTransferStatusMeta(firstB.status).label;
+    const routeA=`${String(firstA.from_branch||'—')}→${String(firstA.to_branch||'—')}`;
+    const routeB=`${String(firstB.from_branch||'—')}→${String(firstB.to_branch||'—')}`;
+    const av=tSortKey==='count'?rowsA.length:(tSortKey==='status'?statusA:routeA);
+    const bv=tSortKey==='count'?rowsB.length:(tSortKey==='status'?statusB:routeB);
+    if(typeof av==='number'&&typeof bv==='number')return tSortDir==='asc'?av-bv:bv-av;
+    const cmp=String(av).localeCompare(String(bv),'ar',{numeric:true,sensitivity:'base'});
+    return tSortDir==='asc'?cmp:-cmp;
+  });
+  sortedTripIds.forEach(tripId=>{
     const original=transferTripGroups[tripId]||[];
     const filtered=original.filter(s=>{
       if(branchFilter&&String(s.from_branch||'')!==branchFilter&&String(s.to_branch||'')!==branchFilter)return false;
