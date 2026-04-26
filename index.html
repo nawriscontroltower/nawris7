@@ -2771,7 +2771,11 @@ async function loadAll(){
     });
     buildDropdowns();refreshAll();
     setSyncState('ok','متصل');
-    loadAssignmentsFromSupabase().then(()=>{renderAPIShipments();renderAssignStats();}).catch(()=>{});
+    loadAssignmentsFromSupabase().then(()=>{
+      stripManagerAssignmentsFromStore();
+      renderAPIShipments();
+      renderAssignStats();
+    }).catch(()=>{});
     _loadProcessedFromSupabase().then(()=>{try{renderReturns();renderTransfers();}catch(_){}}).catch(()=>{});
     loadReturns();loadTransfers();loadDbStats();
     buildJanzourSet(); // Sync Janzour store set from Supabase stores table
@@ -6355,10 +6359,13 @@ async function renderStaff(){
   if(assignStatsEl){
     const a=getAPIAssignments();
     const empStats={};
-    Object.values(USERS).forEach(u=>{empStats[u.name]={name:u.name,total:0,crit:0,warn:0,done:0,pending:0,noAnswer:0};});
+    Object.values(USERS).forEach(u=>{
+      if(u.role==='manager')return;
+      empStats[u.name]={name:u.name,total:0,crit:0,warn:0,done:0,pending:0,noAnswer:0};
+    });
     apiShipments.forEach(s=>{
       const emp=a[s.tracking_code];
-      if(!emp)return;
+      if(!emp||!isAssignableEmployeeName(emp))return;
       if(!empStats[emp])empStats[emp]={name:emp,total:0,crit:0,warn:0,done:0,pending:0,noAnswer:0};
       empStats[emp].total++;
       if(cls(s.delay_days)==='critical')empStats[emp].crit++;
@@ -6368,16 +6375,16 @@ async function renderStaff(){
       else if(cr.result==='pending')empStats[emp].pending++;
       else if(cr.result==='no_answer')empStats[emp].noAnswer++;
     });
-    const rows=Object.values(empStats).sort((a,b)=>b.total-a.total);
+    const rows=Object.values(empStats).filter(e=>e.total>0&&isAssignableEmployeeName(e.name)).sort((a,b)=>b.total-a.total);
     const unassigned=apiShipments.filter(s=>!a[s.tracking_code]).length;
-    if(!rows.some(r=>r.total>0)&&!unassigned){
+    if(!rows.length&&!unassigned){
       assignStatsEl.innerHTML='<div style="text-align:center;padding:20px;color:var(--mute)">لم يتم توزيع الطرود بعد — اذهب لتبويب طرود API ← توزيع الطرود</div>';
     } else {
       assignStatsEl.innerHTML=`<div class="tw"><table>
         <thead><tr><th>الموظف</th><th>المسند</th><th style="color:var(--red)">حرج</th><th style="color:var(--gold)">تحذير</th><th style="color:var(--grn)">✅ منجز</th><th style="color:var(--gold)">⏳ قيد</th><th style="color:var(--red)">📵 لا يرد</th><th>نسبة الإنجاز</th></tr></thead>
         <tbody>
           ${unassigned?`<tr><td style="color:var(--mute)" colspan="8">⚠️ ${unassigned} طرد غير مسندة — <span style="color:var(--pur);cursor:pointer" onclick="gTab('api-shipments');setTimeout(openAssignPanel,200)">وزّعها الآن</span></td></tr>`:''}
-          ${rows.filter(r=>r.total>0).map(r=>{
+          ${rows.map(r=>{
             const pct=r.total?Math.round(r.done/r.total*100):0;
             const pc=pct>70?'var(--grn)':pct>40?'var(--gold)':'var(--red)';
             return`<tr>
@@ -8032,6 +8039,7 @@ function updateJanzourAssignControls(){
 function assignSelectedJanzour(){
   const emp=document.getElementById('j-assign-emp')?.value||'';
   if(!emp){toast('اختر موظفاً أولاً','w');return;}
+  if(isManagerName(emp)){toast('لا يُسمح بإسناد الطرود إلى المدير','e');return;}
   const a=_getAssignmentsRaw();const now=Date.now();let count=0;
   jChecked.forEach(id=>{
     const s=apiShipments.find(x=>String(x.id)===String(id));
@@ -8055,6 +8063,7 @@ function bulkAssignFilteredJanzourBranch(){
   const branch=document.getElementById('j-assign-branch')?.value||'';
   const emp=document.getElementById('j-assign-branch-emp')?.value||'';
   if(!emp){toast('اختر موظفاً أولاً','w');return;}
+  if(isManagerName(emp)){toast('لا يُسمح بإسناد الطرود إلى المدير','e');return;}
   const targets=jFilteredData.filter(s=>!branch||String(s.current_branch||'').trim()===branch);
   if(!targets.length){toast('لا توجد طرود مطابقة','w');return;}
   const a=_getAssignmentsRaw();const now=Date.now();
@@ -9534,6 +9543,10 @@ async function loadAssignmentsFromSupabase(){
 }
 
 function setAssignedTo(code,empName){
+  if(empName&&isManagerName(empName)){
+    toast('لا يُسمح بإسناد الطرود إلى حساب المدير','e');
+    return;
+  }
   const a=_getAssignmentsRaw();
   if(empName)a[code]={emp:empName,at:Date.now()};
   else delete a[code];
@@ -9550,14 +9563,39 @@ function setAssignedTo(code,empName){
 function getActiveEmployees(){
   return Object.values(USERS).filter(u=>u.status!=='inactive'&&u.role!=='manager').map(u=>u.name);
 }
+/** تطابق بالاسم الظاهر (الاسم الكامل في النظام) */
+function userByDisplayName(name){
+  if(name==null||name==='')return null;
+  return Object.values(USERS).find(u=>String(u.name)===String(name).trim())||null;
+}
+/** موظف يمكن إسناد طرود API إليه — المدير مُستبعد دائماً */
+function isAssignableEmployeeName(name){
+  const u=userByDisplayName(name);
+  return !!(u&&u.status!=='inactive'&&u.role!=='manager');
+}
+function isManagerName(name){
+  return userByDisplayName(name)?.role==='manager';
+}
+/** إزالة أي إسناد قديم لحساب مدير (لا يُسمح بإسناد الطرود للمدير) */
+function stripManagerAssignmentsFromStore(){
+  const a=_getAssignmentsRaw();
+  let removed=0;
+  for(const [code,entry] of Object.entries(a)){
+    if(entry&&entry.emp&&isManagerName(entry.emp)){
+      delete a[code];
+      removed++;
+    }
+  }
+  if(removed)saveAPIAssignments(a);
+}
 
 // ── AUTO ASSIGN ──
 function autoAssign(method){
   const empChecks=document.querySelectorAll('#assign-emp-checks input:checked');
   let emps=empChecks.length>0
-    ?[...empChecks].map(c=>c.value)
-    :Object.values(USERS).filter(u=>u.status!=='inactive'&&u.name).map(u=>u.name);
-  if(!emps.length){toast('لا يوجد موظفون للتوزيع — أضف موظفين من تبويب المستخدمون','w');return;}
+    ?[...empChecks].map(c=>c.value).filter(n=>isAssignableEmployeeName(n))
+    :getActiveEmployees();
+  if(!emps.length){toast('حدد موظفاً واحداً على الأقل (تأكد أن المدير غير مُختار) أو أضف موظفين من تبويب المستخدمون','w');return;}
 
   const a=_getAssignmentsRaw();
   const flat=getAPIAssignments();
@@ -9604,6 +9642,7 @@ function autoAssign(method){
 function assignSelected(){
   const emp=document.getElementById('manual-assign-emp')?.value;
   if(!emp){toast('اختر موظفاً أولاً','w');return;}
+  if(isManagerName(emp)){toast('لا يُسمح بإسناد الطرود إلى المدير','e');return;}
   const selectedIds=getExplicitlySelectedApiIds();
   if(!selectedIds.length){toast('حدد الطرود عبر checkbox أولاً','w');return;}
   const a=_getAssignmentsRaw();
@@ -9626,6 +9665,7 @@ function bulkAssignFilteredBranch(){
   const branch=document.getElementById('assign-branch-filter')?.value||'';
   const emp=document.getElementById('assign-branch-emp')?.value||'';
   if(!emp){toast('اختر موظفاً أولاً','w');return;}
+  if(isManagerName(emp)){toast('لا يُسمح بإسناد الطرود إلى المدير','e');return;}
   const targets=apiFilteredData.filter(s=>!branch||String(s.current_branch||'')===branch);
   if(!targets.length){toast('لا توجد طرود مطابقة للفلتر الحالي','w');return;}
   const a=_getAssignmentsRaw();
@@ -9693,7 +9733,10 @@ function refreshAssignPanelEmps(){
   // Count assignments per employee
   const counts={};
   emps.forEach(u=>{counts[u.name]=0;});
-  Object.values(a).forEach(name=>{if(counts[name]!==undefined)counts[name]++;else counts[name]=1;});
+  Object.values(a).forEach(name=>{
+    if(!isAssignableEmployeeName(name))return;
+    if(counts[name]!==undefined)counts[name]++;else counts[name]=1;
+  });
   const selectedIds=getExplicitlySelectedApiIds();
   const selectedParcels=selectedIds.length
     ? selectedIds.map(id=>apiShipments.find(s=>String(s.id)===String(id))).filter(Boolean)
@@ -9707,7 +9750,7 @@ function refreshAssignPanelEmps(){
     const disabled=!selectableEmps.some(se=>se.name===u.name);
     return `
     <label style="display:flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--rim);border-radius:var(--r2);padding:${isMob?'12px 14px':'7px 12px'};cursor:pointer;transition:border-color .15s;min-height:${isMob?'48px':'auto'}" onmouseover="this.style.borderColor='var(--pur)'" onmouseout="this.style.borderColor='var(--rim)'">
-      <input type="checkbox" value="${u.name}" ${disabled?'':'checked'} ${disabled?'disabled':''} style="accent-color:var(--pur);width:${isMob?'18px':'13px'};height:${isMob?'18px':'13px'};flex-shrink:0">
+      <input type="checkbox" value="${u.name}" ${disabled?'disabled':''} style="accent-color:var(--pur);width:${isMob?'18px':'13px'};height:${isMob?'18px':'13px'};flex-shrink:0">
       <span style="font-size:${isMob?'14px':'12px'};font-weight:700;color:var(--white)">${u.name}</span>
       <span style="font-size:11px;color:var(--mute)">${u.role==='manager'?'مدير':'موظف'}</span>
       <span style="font-size:11px;font-family:var(--mono);color:${disabled?'var(--red)':'var(--pur)'};margin-right:auto">${disabled?'غير متاح':' '+(counts[u.name]||0)+' طرد'}</span>
@@ -9749,10 +9792,13 @@ function renderAssignStats(){
   const statsEl=document.getElementById('assign-stats');
   if(!statsEl)return;
   const empMap={};
-  Object.entries(USERS).forEach(([,u])=>{empMap[u.name]={name:u.name,total:0,crit:0,done:0};});
+  Object.entries(USERS).forEach(([,u])=>{
+    if(u.role==='manager')return;
+    empMap[u.name]={name:u.name,total:0,crit:0,done:0};
+  });
   apiShipments.forEach(s=>{
     const emp=a[s.tracking_code];
-    if(!emp)return;
+    if(!emp||!isAssignableEmployeeName(emp))return;
     if(!empMap[emp])empMap[emp]={name:emp,total:0,crit:0,done:0};
     empMap[emp].total++;
     if(cls(s.delay_days)==='critical')empMap[emp].crit++;
@@ -9760,7 +9806,7 @@ function renderAssignStats(){
     if(cr.result==='solved'||cr.result==='contacted')empMap[emp].done++;
   });
   const unassigned=apiShipments.filter(s=>!a[s.tracking_code]).length;
-  const rows=Object.values(empMap).filter(e=>e.total>0).sort((a,b)=>b.total-a.total);
+  const rows=Object.values(empMap).filter(e=>e.total>0&&isAssignableEmployeeName(e.name)).sort((a,b)=>b.total-a.total);
   statsEl.innerHTML=`
     <div style="background:var(--bg4);border-radius:var(--r2);padding:10px;text-align:center;border:1px solid var(--rim)">
       <div style="font-size:18px;font-weight:900;color:var(--mute);font-family:var(--mono)">${unassigned}</div>
