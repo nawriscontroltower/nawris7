@@ -3061,6 +3061,101 @@ function persistAPIShipmentsCache(){
     }
   }
 }
+/** أسماء مفاتيح قصيرة + حد للحجم — يمنع QuotaExceededError في api_shipments_cache */
+const _MAX_API_SEEN_CODES=10000;
+const _MAX_API_SNAPSHOT_KEYS=2200;
+function _apiRowFromCacheEntry(c){
+  if(!c||typeof c!=='object')c={};
+  return{
+    client_name:String(c.c??c.client??'').trim(),
+    receiver_name:String(c.r??c.receiver??'').trim(),
+    customer_phone:String(c.p??c.phone??'').trim(),
+    captain:String(c.k??c.captain??'').trim(),
+    current_branch:String(c.b??c.branch??'').trim(),
+    government:String(c.g??c.gov??'').trim(),
+    area:String(c.a??c.area??'').trim(),
+    delay_days:Number(c.d??c.delay??0)||0
+  };
+}
+function _pruneApiSnapshotCacheObject(cache, mustKeepSet, maxKeys){
+  const c=cache&&typeof cache==='object'?cache:{};
+  const must=mustKeepSet?new Set([...mustKeepSet].filter(Boolean)):new Set();
+  const out={};
+  for(const k of must) if(c[k])out[k]=c[k];
+  if(Object.keys(out).length>maxKeys){
+    const limited={};
+    let n=0;
+    for(const k of must){
+      if(n>=maxKeys)break;
+      if(c[k]){limited[k]=c[k];n++;}
+    }
+    return limited;
+  }
+  const rest=[];
+  for(const k of Object.keys(c)){
+    if(out[k])continue;
+    const at=Number(c[k]?.at)||0;
+    rest.push([k,at,c[k]]);
+  }
+  rest.sort((a,b)=>b[1]-a[1]);
+  let space=maxKeys-Object.keys(out).length;
+  for(const [k, , ent] of rest){
+    if(space<=0)break;
+    out[k]=ent;
+    space--;
+  }
+  return out;
+}
+function _freeLocalStorageSpaceForAPI(){
+  try{
+    for(const k of['ret_processed_cache','tf_processed_cache','tf_seen_codes']){
+      try{localStorage.removeItem(k);}catch(e){}
+    }
+    try{localStorage.removeItem('staff_monthly_contact_state_v1');}catch(e){}
+    Object.keys(localStorage).filter(x=>x.startsWith('cr_snap_v1_')).slice(0,25).forEach(k=>{
+      try{localStorage.removeItem(k);}catch(e){}
+    });
+  }catch(e){}
+}
+function safeLocalStorageSetForQuota(key, str, onFail){
+  try{
+    localStorage.setItem(key, str);
+    return true;
+  }catch(e){
+    const isQuota=e&&(e.name==='QuotaExceededError'||e.code===22);
+    if(!isQuota){
+      if(onFail)onFail(e);
+      return false;
+    }
+    _freeLocalStorageSpaceForAPI();
+    try{
+      localStorage.setItem(key, str);
+      return true;
+    }catch(e2){
+      if(key==='api_shipments_cache'){
+        try{
+          const o=JSON.parse(str);
+          const mini=_pruneApiSnapshotCacheObject(o,new Set(),400);
+          localStorage.setItem(key, JSON.stringify(mini));
+          return true;
+        }catch(e3){
+          if(onFail)onFail(e3);
+        }
+      }else if(key==='api_seen_codes'){
+        try{
+          const arr=JSON.parse(str);
+          const t=Array.isArray(arr)?arr:[];
+          const cut=t.slice(-Math.min(2000, _MAX_API_SEEN_CODES));
+          localStorage.setItem(key, JSON.stringify(cut));
+          return true;
+        }catch(e3){
+          if(onFail)onFail(e3);
+        }
+      }else if(onFail)onFail(e2);
+    }
+  }
+  return false;
+}
 function resolveCaptainPhoneStrict(s){
   if(!s)return '';
   const captainKey=normalizeIdentityText(s.captain||s.driver_name||'');
@@ -7454,18 +7549,30 @@ async function fetchAPIShipments(){
     });
     persistApiProcessedCodes();
 
-    // ── Snapshot: track API shipment codes for processed detection ──
+    // ── Snapshot: track API shipment codes for processed detection (مضغوط + حد حجم — يتجنب امتلاء localStorage) ──
     const apiCurrentCodes=new Set(apiShipments.map(s=>s.tracking_code).filter(Boolean));
     const apiCache=_getApiProcessedSnapshotCache();
+    const _snapAt=Date.now();
     apiShipments.forEach(s=>{
-      if(s.tracking_code)apiCache[s.tracking_code]={code:s.tracking_code,client:s.client_name||'',receiver:s.receiver_name||'',phone:s.customer_phone||'',captain:s.captain||'',branch:s.current_branch||'',gov:s.government||'',area:s.area||'',delay:s.delay_days||0,status:s.status||''};
+      if(s.tracking_code)apiCache[s.tracking_code]={
+        c:s.client_name||'',r:s.receiver_name||'',p:s.customer_phone||'',
+        k:s.captain||'',b:s.current_branch||'',g:s.government||'',a:s.area||'',
+        d:s.delay_days||0,t:s.status||'',at:_snapAt
+      };
     });
-    localStorage.setItem('api_shipments_cache',JSON.stringify(apiCache));
+    const prunedSnap=_pruneApiSnapshotCacheObject(apiCache,apiCurrentCodes,_MAX_API_SNAPSHOT_KEYS);
+    if(!safeLocalStorageSetForQuota('api_shipments_cache',JSON.stringify(prunedSnap),e=>console.warn('api_shipments_cache',e))){
+      try{ toast('تنبيه: تعذر حفظ لقطة «المعالجة» — مساحة المتصفح ممتلئة. من الإعدادات: امسح بيانات nawris أو افتح بمتصفح/وضع خاص.','w');}catch(_){}
+    }
     try{
       const prev=JSON.parse(localStorage.getItem('api_seen_codes')||'[]');
-      const merged=[...new Set([...prev,...apiCurrentCodes])];
-      localStorage.setItem('api_seen_codes',JSON.stringify(merged));
-    }catch{}
+      const pArr=Array.isArray(prev)?prev:[];
+      let merged=[...new Set([...pArr,...[...apiCurrentCodes]])];
+      if(merged.length>_MAX_API_SEEN_CODES) merged=merged.slice(-_MAX_API_SEEN_CODES);
+      if(!safeLocalStorageSetForQuota('api_seen_codes',JSON.stringify(merged),e=>console.warn('api_seen_codes',e))){
+        try{localStorage.setItem('api_seen_codes',JSON.stringify(merged.slice(-2000)));}catch(e2){console.warn('api_seen_codes fallback',e2);}
+      }
+    }catch(e0){ console.warn('api_seen merge',e0); }
     _syncApiProcessedToSupabase();
 
     // Always show full API data by default after each sync.
@@ -7710,8 +7817,8 @@ function renderAPIShipments(){
       const disappearedShipments=apiSeenBefore
         .filter(tc=>!currentApiCodes.has(tc))
         .map(tc=>{
-          const c=apiCache[tc]||{};
-          return {id:'api_'+tc,tracking_code:tc,client_name:c.client||'',receiver_name:c.receiver||'',customer_phone:c.phone||'',captain:c.captain||'',current_branch:c.branch||'',government:c.gov||'',area:c.area||'',delay_days:c.delay||0,status:'processed',source:'api',_cached:true};
+          const r=_apiRowFromCacheEntry(apiCache[tc]||{});
+          return {id:'api_'+tc,tracking_code:tc,client_name:r.client_name,receiver_name:r.receiver_name,customer_phone:r.customer_phone,captain:r.captain,current_branch:r.current_branch,government:r.government,area:r.area,delay_days:r.delay_days,status:'processed',source:'api',_cached:true};
         });
       // 3. Parcels with contact result in Supabase that are no longer in API
       const allShownCodes=new Set([...fromCurrent.map(s=>s.tracking_code),...disappearedShipments.map(s=>s.tracking_code)]);
@@ -7723,8 +7830,8 @@ function renderAPIShipments(){
         })
         .map(cr=>{
           const tc=String(cr.tracking_code||'').trim();
-          const c=apiCache[tc]||{};
-          return {id:'api_'+tc,tracking_code:tc,client_name:c.client||'',receiver_name:c.receiver||'',customer_phone:c.phone||'',captain:c.captain||'',current_branch:c.branch||'',government:c.gov||'',area:c.area||'',delay_days:c.delay||0,status:'processed',source:'api',_cached:true};
+          const r=_apiRowFromCacheEntry(apiCache[tc]||{});
+          return {id:'api_'+tc,tracking_code:tc,client_name:r.client_name,receiver_name:r.receiver_name,customer_phone:r.customer_phone,captain:r.captain,current_branch:r.current_branch,government:r.government,area:r.area,delay_days:r.delay_days,status:'processed',source:'api',_cached:true};
         });
       list=[...fromCurrent,...disappearedShipments,...fromContactDB];
     }else{
@@ -8204,8 +8311,8 @@ function renderJanzour(){
       const disappearedShipments=apiSeenBefore
         .filter(tc=>!currentApiCodes.has(tc))
         .map(tc=>{
-          const c=apiCache[tc]||{};
-          return {id:'api_'+tc,tracking_code:tc,client_name:c.client||'',receiver_name:c.receiver||'',customer_phone:c.phone||'',captain:c.captain||'',current_branch:c.branch||'',government:c.gov||'',area:c.area||'',delay_days:c.delay||0,status:'processed',source:'api',_cached:true};
+          const r=_apiRowFromCacheEntry(apiCache[tc]||{});
+          return {id:'api_'+tc,tracking_code:tc,client_name:r.client_name,receiver_name:r.receiver_name,customer_phone:r.customer_phone,captain:r.captain,current_branch:r.current_branch,government:r.government,area:r.area,delay_days:r.delay_days,status:'processed',source:'api',_cached:true};
         })
         .filter(s=>isJanzourStoreClientName(s.client_name));
       const allShownCodes=new Set([...fromCurrent.map(s=>s.tracking_code),...disappearedShipments.map(s=>s.tracking_code)]);
@@ -8217,8 +8324,8 @@ function renderJanzour(){
         })
         .map(cr=>{
           const tc=String(cr.tracking_code||'').trim();
-          const c=apiCache[tc]||{};
-          return {id:'api_'+tc,tracking_code:tc,client_name:c.client||'',receiver_name:c.receiver||'',customer_phone:c.phone||'',captain:c.captain||'',current_branch:c.branch||'',government:c.gov||'',area:c.area||'',delay_days:c.delay||0,status:'processed',source:'api',_cached:true};
+          const r=_apiRowFromCacheEntry(apiCache[tc]||{});
+          return {id:'api_'+tc,tracking_code:tc,client_name:r.client_name,receiver_name:r.receiver_name,customer_phone:r.customer_phone,captain:r.captain,current_branch:r.current_branch,government:r.government,area:r.area,delay_days:r.delay_days,status:'processed',source:'api',_cached:true};
         })
         .filter(s=>isJanzourStoreClientName(s.client_name));
       list=[...fromCurrent,...disappearedShipments,...fromContactDB];
@@ -8872,6 +8979,10 @@ function loadCachedAPIShipments(){
       const tbApiEl3=document.getElementById('tb-api');
       if(tbApiEl3)tbApiEl3.textContent=apiShipments.length;
       updateKPIs();
+      try{
+        if(typeof updateAPIKPIs==='function')updateAPIKPIs();
+        if(typeof renderAPIShipments==='function')renderAPIShipments();
+      }catch(e2){console.warn('cached API UI refresh',e2);}
     }
     // loadAll() runs buildJanzourSet() before apiShipments is filled from cache — refresh subset now
     buildJanzourSet();
