@@ -187,6 +187,9 @@ table td:first-child{font-family:var(--mono);font-feature-settings:"tnum"}
 .flt-drawer{position:fixed;top:0;left:0;bottom:0;width:min(340px,92vw);background:var(--bg3);border-left:1px solid var(--rim);box-shadow:8px 0 28px rgba(2,6,23,.28);z-index:521;transform:translateX(-104%);transition:transform .24s ease;display:flex;flex-direction:column}
 .flt-drawer.on{transform:translateX(0)}
 .flt-drawer-overlay.on{display:block}
+/* واجهة RTL: الدرج من يمين الشاشة (طبيعي للعربية) */
+html[dir=rtl] .flt-drawer{left:auto;right:0;border-left:0;border-right:1px solid var(--rim);box-shadow:-8px 0 28px rgba(2,6,23,.32);transform:translateX(104%)}
+html[dir=rtl] .flt-drawer.on{transform:translateX(0)}
 .flt-drawer-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--rim)}
 .flt-drawer-body{padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
 .sb-divider{height:1px;background:rgba(155,109,255,.1);margin:6px 16px}
@@ -1394,12 +1397,13 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
       <div class="flt-drawer-head">
         <strong style="font-size:14px">تصفية الطرود</strong>
         <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm" onclick="resetAPIFilters();renderAPIShipments();" title="مسح كل الفلاتر">✕ مسح</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetAPIFilters();renderAPIShipments();closeApiFiltersDrawer();" title="مسح كل الفلاتر">✕ مسح</button>
           <button class="btn btn-ghost btn-sm" onclick="closeApiFiltersDrawer()">✕ إغلاق</button>
         </div>
       </div>
-      <div class="flt-drawer-body">
-        <input class="fi fi-grow" id="a-q" type="text" placeholder="🔍 بحث بالكود، المتجر، المستلم، المندوب، الفرع..." oninput="renderAPIShipments()">
+      <div class="flt-drawer-body" style="width:100%;box-sizing:border-box">
+        <p style="font-size:10px;color:var(--dim);line-height:1.5;margin:0">«كل التأخير» = تصنيف (حرج/تحذير/موعد). «أيام التأخير» = نطاق رقمي. يمكن الجمع بينهما لتضييق أدق.</p>
+        <input class="fi fi-grow" id="a-q" type="text" placeholder="🔍 كود، متجر، مستلم، مندوب، فرع، محافظة، مسند…" oninput="renderAPIShipments()" style="width:100%;min-width:0;box-sizing:border-box">
         <select class="fi" id="a-fd" onchange="renderAPIShipments()" style="min-width:120px">
           <option value="">كل التأخير</option>
           <option value="critical">🔴 +15 يوم</option>
@@ -6966,9 +6970,12 @@ function getJanzourScopeList(){
 }
 
 function resetAPIFilters(){
-  ['a-q','a-fd','a-fst','a-fdays','a-fcap','a-fbr','a-fgov'].forEach(id=>{
+  ['a-q','a-fd','a-fst','a-fdays','a-fcap','a-fbr','a-fgov','a-femp'].forEach(id=>{
     const el=document.getElementById(id);
-    if(el){if(el.tagName==='INPUT')el.value='';else el.selectedIndex=0;}
+    if(!el)return;
+    if(el.type==='checkbox')el.checked=false;
+    else if(el.tagName==='INPUT')el.value='';
+    else el.selectedIndex=0;
   });
   setAPISeg('all');
 }
@@ -7901,10 +7908,10 @@ function renderAPIShipments(){
   list=list.filter(s=>{
     if(fd&&cls(s.delay_days)!==fd)return false;
     if(fst&&s.status!==fst)return false;
-    if(fcap&&s.captain!==fcap)return false;
-    if(fbr&&s.current_branch!==fbr)return false;
-    if(fgov&&s.government!==fgov)return false;
-    if(femp&&assignments[s.tracking_code]!==femp)return false;
+    if(fcap&&normalizeIdentityText(s.captain||'')!==normalizeIdentityText(fcap))return false;
+    if(fbr&&normalizeIdentityText(s.current_branch||'')!==normalizeIdentityText(fbr))return false;
+    if(fgov&&normalizeIdentityText(s.government||'')!==normalizeIdentityText(fgov))return false;
+    if(femp&&String(assignments[s.tracking_code]||'').trim()!==String(femp).trim())return false;
     if(fdays){
       const d=s.delay_days||0;
       if(fdays==='0-5'&&(d<0||d>5))return false;
@@ -7915,7 +7922,8 @@ function renderAPIShipments(){
       if(fdays==='60+'&&d<61)return false;
     }
     if(q){
-      const haystack=normalizeIdentityText(`${s.tracking_code} ${s.client_name} ${s.receiver_name} ${s.captain} ${s.customer_phone} ${s.current_branch} ${s.government} ${s.area}`);
+      const asg=String(assignments[s.tracking_code]||'').trim();
+      const haystack=normalizeIdentityText(`${s.tracking_code} ${s.client_name} ${s.receiver_name} ${s.captain} ${s.customer_phone} ${s.current_branch} ${s.government} ${s.area} ${asg}`);
       const codeNorm=normalizeIdentityText(s.tracking_code||'');
       const qCompact=q.replace(/[^a-z0-9]/g,'');
       const codeCompact=codeNorm.replace(/[^a-z0-9]/g,'');
