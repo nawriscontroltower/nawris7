@@ -1664,6 +1664,28 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <div class="kcard gold"><div class="klbl">نسبة التسليم %</div><div class="kval" id="jr-m-del-pct">—</div></div>
         <div class="kcard orn"><div class="klbl">نسبة المرتجع %</div><div class="kval" id="jr-m-ret-pct">—</div></div>
       </div>
+      <div class="ctitle" style="margin-bottom:8px;font-size:13px">📋 طرود الشهر الحالي (معالجة نهائية)</div>
+      <p style="font-size:10px;color:var(--mute);margin:-4px 0 10px">نفس منطق البطاقات أعلاه: جنزور + تسليم أو مرتجع + شهر الاحتساب.</p>
+      <div class="g2" style="margin-bottom:14px;align-items:stretch">
+        <div class="card" style="padding:12px;border-right:3px solid var(--grn);margin:0">
+          <div style="font-weight:800;margin-bottom:8px;color:var(--grn)">✅ تم التسليم <span class="badge b-grn" id="jr-m-d-list-count">0</span></div>
+          <div class="tw" style="max-height:240px;overflow:auto">
+            <table>
+              <thead><tr><th>الكود</th><th>المتجر</th><th>الفرع</th><th>المندوب</th><th>تاريخ الاحتساب</th></tr></thead>
+              <tbody id="jr-m-del-tbody"><tr><td colspan="5" style="text-align:center;padding:12px;color:var(--mute)">—</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" style="padding:12px;border-right:3px solid var(--red);margin:0">
+          <div style="font-weight:800;margin-bottom:8px;color:var(--red)">↩️ مرتجع <span class="badge b-red" id="jr-m-r-list-count">0</span></div>
+          <div class="tw" style="max-height:240px;overflow:auto">
+            <table>
+              <thead><tr><th>الكود</th><th>المتجر</th><th>الفرع</th><th>المندوب</th><th>تاريخ الاحتساب</th></tr></thead>
+              <tbody id="jr-m-ret-tbody"><tr><td colspan="5" style="text-align:center;padding:12px;color:var(--mute)">—</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
       <div class="ctitle" style="margin-bottom:8px;font-size:13px">📆 الأشهر السابقة</div>
       <div class="tw" style="max-height:280px;overflow:auto">
         <table>
@@ -9650,6 +9672,67 @@ function buildJanzourMonthlyRatesFromApiLocal(){
   }).sort((a,b)=>b.year-a.year||b.month-a.month);
   return rows;
 }
+function jrEscHtml(v){
+  return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+}
+function formatJanzourMonthlyDateLabel(sh){
+  try{
+    const d=pickJanzourMonthlyBucketDate(sh);
+    return d.toLocaleString('ar-LY',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  }catch(_){return '—';}
+}
+/** جداول تفصيل الطرود للشهر التقويمي (cy, cm) — تسليم / مرتجع */
+function renderJanzourMonthlyParcelLists(cy,cm){
+  const delTb=document.getElementById('jr-m-del-tbody');
+  const retTb=document.getElementById('jr-m-ret-tbody');
+  const delCnt=document.getElementById('jr-m-d-list-count');
+  const retCnt=document.getElementById('jr-m-r-list-count');
+  if(!delTb||!retTb)return;
+  const emptyRow=(n)=>`<tr><td colspan="${n}" style="text-align:center;padding:14px;color:var(--mute)">لا طرود في هذا الشهر</td></tr>`;
+  if(!cy||!cm){
+    delTb.innerHTML=emptyRow(5);
+    retTb.innerHTML=emptyRow(5);
+    if(delCnt)delCnt.textContent='0';
+    if(retCnt)retCnt.textContent='0';
+    return;
+  }
+  buildJanzourSet();
+  const pool=getJanzourAnalyticsPool();
+  const dList=[],rList=[];
+  for(const s of pool){
+    const st=commissionClassifyDR(s._metricStatus||s);
+    if(st!=='d'&&st!=='r')continue;
+    const dt=pickJanzourMonthlyBucketDate(s);
+    if(dt.getFullYear()!==cy||dt.getMonth()+1!==cm)continue;
+    const row={
+      code:String(s.tracking_code||'—'),
+      store:String(s.client_name||'—'),
+      br:String(s.current_branch||'—'),
+      cap:String(s.captain||s.driver_name||'—'),
+      when:formatJanzourMonthlyDateLabel(s)
+    };
+    if(st==='d')dList.push(row);
+    else rList.push(row);
+  }
+  dList.sort((a,b)=>String(a.code).localeCompare(String(b.code),'ar'));
+  rList.sort((a,b)=>String(a.code).localeCompare(String(b.code),'ar'));
+  delTb.innerHTML=dList.length?dList.map(r=>`<tr>
+    <td style="font-family:var(--mono);font-size:11px">${jrEscHtml(r.code)}</td>
+    <td style="font-weight:600">${jrEscHtml(r.store)}</td>
+    <td>${jrEscHtml(r.br)}</td>
+    <td>${jrEscHtml(r.cap)}</td>
+    <td style="font-size:11px;color:var(--mute)">${jrEscHtml(r.when)}</td>
+  </tr>`).join(''):emptyRow(5);
+  retTb.innerHTML=rList.length?rList.map(r=>`<tr>
+    <td style="font-family:var(--mono);font-size:11px">${jrEscHtml(r.code)}</td>
+    <td style="font-weight:600">${jrEscHtml(r.store)}</td>
+    <td>${jrEscHtml(r.br)}</td>
+    <td>${jrEscHtml(r.cap)}</td>
+    <td style="font-size:11px;color:var(--mute)">${jrEscHtml(r.when)}</td>
+  </tr>`).join(''):emptyRow(5);
+  if(delCnt)delCnt.textContent=String(dList.length);
+  if(retCnt)retCnt.textContent=String(rList.length);
+}
 function renderJanzourMonthlyRatesSection(){
   const errEl=document.getElementById('jr-monthly-err');
   const hist=document.getElementById('jr-monthly-hist-tbody');
@@ -9658,6 +9741,9 @@ function renderJanzourMonthlyRatesSection(){
     errEl.style.display='none';
     errEl.textContent='';
   }
+  const now=new Date();
+  const cy0=now.getFullYear();
+  const cm0=now.getMonth()+1;
   if(!janzourMonthlyRatesRows){
     if(hist)hist.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--mute)">لا بيانات محمّلة</td></tr>';
     setTxt('jr-m-period','—');
@@ -9666,11 +9752,11 @@ function renderJanzourMonthlyRatesSection(){
     setTxt('jr-m-ret','—');
     setTxt('jr-m-del-pct','—');
     setTxt('jr-m-ret-pct','—');
+    renderJanzourMonthlyParcelLists(0,0);
     return;
   }
-  const now=new Date();
-  const cy=now.getFullYear();
-  const cm=now.getMonth()+1;
+  const cy=cy0;
+  const cm=cm0;
   const cur=janzourMonthlyRatesRows.find(r=>{
     const y=Number(r.year);const mo=Number(r.month);
     return y===cy&&mo===cm;
@@ -9699,6 +9785,7 @@ function renderJanzourMonthlyRatesSection(){
   });
   if(!prev.length){
     hist.innerHTML='<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--mute)">لا سجلات أشهر سابقة</td></tr>';
+    renderJanzourMonthlyParcelLists(cy,cm);
     return;
   }
   hist.innerHTML=prev.map(r=>{
@@ -9716,6 +9803,7 @@ function renderJanzourMonthlyRatesSection(){
       <td><span class="badge b-dim">${rPct}%</span></td>
     </tr>`;
   }).join('');
+  renderJanzourMonthlyParcelLists(cy,cm);
 }
 function reloadJanzourMonthlyRatesUi(showToast){
   const errEl=document.getElementById('jr-monthly-err');
