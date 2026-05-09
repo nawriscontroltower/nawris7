@@ -1673,7 +1673,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
           <tbody id="jr-monthly-hist-tbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--mute)">اضغط «تحديث الشهري» أو افتح التبويب مجدداً</td></tr></tbody>
         </table>
       </div>
-      <p style="font-size:10px;color:var(--mute);margin:10px 0 0">تهيئة الخادم: نفّذ <code dir="ltr" style="font-size:10px">api/2026_05_09_janzour_monthly_rates.sql</code> في Supabase.</p>
+      <p style="font-size:10px;color:var(--mute);margin:10px 0 0">تهيئة الخادم: في Supabase → <strong>SQL</strong> → الصق محتوى <code dir="ltr" style="font-size:10px">api/2026_05_09_janzour_monthly_rates.sql</code> → <strong>Run</strong>. إن بقي الخطأ، انتظر دقيقة أو أعد تشغيل المشروع من الإعدادات.</p>
     </div>
 
     <div class="card" style="margin-bottom:14px;border-right:3px solid var(--pur)">
@@ -9673,7 +9673,7 @@ async function reloadJanzourMonthlyRatesUi(showToast){
     const msg=String(e&&e.message||e);
     if(errEl){
       errEl.style.display='block';
-      errEl.textContent='تعذّر جلب الإحصائيات الشهرية. تأكد من تنفيذ ملف SQL على Supabase ووظيفة get_janzour_monthly_rates. '+msg.slice(0,220);
+      errEl.textContent='تعذّر جلب الإحصائيات الشهرية. نفّذ في Supabase (نفس مشروع الـ URL في الكود) ملف api/2026_05_09_janzour_monthly_rates.sql ثم اضغط «تحديث الشهري». تفاصيل: '+msg.slice(0,280);
     }
     if(showToast)toast('⚠️ فشل تحميل الإحصائيات الشهرية','e');
   }

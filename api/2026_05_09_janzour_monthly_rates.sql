@@ -26,8 +26,12 @@ CREATE INDEX IF NOT EXISTS idx_janzour_stores_store_id
   ON public."Janzour_Stores" (store_id);
 
 
--- ── Aggregated monthly stats (only finalized statuses, janźour stores only) ──
-CREATE OR REPLACE FUNCTION public.get_janzour_monthly_rates()
+-- ── Aggregated monthly stats (only finalized statuses, Janzour stores only) ──
+-- PostgREST RPC from JS sends `{}` → use a single jsonb arg (ignored) for reliable discovery.
+DROP FUNCTION IF EXISTS public.get_janzour_monthly_rates();
+DROP FUNCTION IF EXISTS public.get_janzour_monthly_rates(jsonb);
+
+CREATE OR REPLACE FUNCTION public.get_janzour_monthly_rates(p_filter jsonb DEFAULT '{}'::jsonb)
 RETURNS TABLE (
   year integer,
   month integer,
@@ -62,11 +66,14 @@ AS $$
   ORDER BY EXTRACT(YEAR FROM pp.completion_date) DESC, EXTRACT(MONTH FROM pp.completion_date) DESC;
 $$;
 
-COMMENT ON FUNCTION public.get_janzour_monthly_rates() IS
-  'Monthly delivered/returned counts for Janzour stores from Processed_Parcels (completion_date).';
+COMMENT ON FUNCTION public.get_janzour_monthly_rates(jsonb) IS
+  'Monthly delivered/returned counts for Janzour stores from Processed_Parcels (completion_date). p_filter reserved for future use.';
 
 -- PostgREST / Supabase client access
-GRANT EXECUTE ON FUNCTION public.get_janzour_monthly_rates() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_janzour_monthly_rates(jsonb) TO anon, authenticated;
+
+-- Refresh PostgREST schema cache (Supabase) so RPC appears immediately
+NOTIFY pgrst, 'reload schema';
 
 -- If you prefer SECURITY INVOKER instead (honors RLS on base tables), replace the
 -- function with INVOKER and add SELECT policies on "Processed_Parcels" / "Janzour_Stores"
