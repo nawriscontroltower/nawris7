@@ -1677,7 +1677,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <div class="kcard orn"><div class="klbl">نسبة المرتجع %</div><div class="kval" id="jr-m-ret-pct">—</div></div>
       </div>
       <div class="ctitle" style="margin-bottom:8px;font-size:13px">📋 طرود الشهر الحالي (معالجة نهائية)</div>
-      <p style="font-size:10px;color:var(--mute);margin:-4px 0 10px">نفس منطق البطاقات أعلاه: جنزور + تسليم أو مرتجع + شهر الاحتساب.</p>
+      <p style="font-size:10px;color:var(--mute);margin:-4px 0 10px">نفس منطق البطاقات أعلاه: جنزور + تسليم أو مرتجع + شهر الاحتساب. إن لم تظهر الأكواد بعد النشر: <strong>Ctrl+F5</strong> لتحديث الصفحة من غير كاش.</p>
       <div class="g2" style="margin-bottom:14px;align-items:stretch">
         <div class="card" style="padding:12px;border-right:3px solid var(--grn);margin:0">
           <div style="font-weight:800;margin-bottom:8px;color:var(--grn)">✅ تم التسليم <span class="badge b-grn" id="jr-m-d-list-count">0</span></div>
@@ -9732,7 +9732,8 @@ function renderJanzourMonthlyParcelLists(cy,cm){
   const retCnt=document.getElementById('jr-m-r-list-count');
   if(!delTb||!retTb)return;
   const emptyRow=(n)=>`<tr><td colspan="${n}" style="text-align:center;padding:14px;color:var(--mute)">لا طرود في هذا الشهر</td></tr>`;
-  if(!cy||!cm){
+  const clearMode=(cy===0&&cm===0)||!Number.isFinite(cy)||!Number.isFinite(cm);
+  if(clearMode){
     delTb.innerHTML=emptyRow(5);
     retTb.innerHTML=emptyRow(5);
     if(delCnt)delCnt.textContent='0';
@@ -9747,8 +9748,10 @@ function renderJanzourMonthlyParcelLists(cy,cm){
     if(st!=='d'&&st!=='r')continue;
     const dt=pickJanzourMonthlyBucketDate(s);
     if(dt.getFullYear()!==cy||dt.getMonth()+1!==cm)continue;
+    const rawCode=String(s.tracking_code||s.trackingCode||s.code||s.shipment_code||s.barcode||s.awb||'').trim();
+    const idFb=String(s.id||'').replace(/^api_/i,'').trim();
     const row={
-      code:String(s.tracking_code||'—'),
+      code:rawCode||idFb||'—',
       store:String(s.client_name||'—'),
       br:String(s.current_branch||'—'),
       cap:String(s.captain||s.driver_name||'—'),
@@ -9760,14 +9763,14 @@ function renderJanzourMonthlyParcelLists(cy,cm){
   dList.sort((a,b)=>String(a.code).localeCompare(String(b.code),'ar'));
   rList.sort((a,b)=>String(a.code).localeCompare(String(b.code),'ar'));
   delTb.innerHTML=dList.length?dList.map(r=>`<tr>
-    <td style="font-family:var(--mono);font-size:11px">${jrEscHtml(r.code)}</td>
+    <td dir="ltr" style="font-family:var(--mono);font-size:12px;text-align:left;unicode-bidi:isolate">${jrEscHtml(r.code)}</td>
     <td style="font-weight:600">${jrEscHtml(r.store)}</td>
     <td>${jrEscHtml(r.br)}</td>
     <td>${jrEscHtml(r.cap)}</td>
     <td style="font-size:11px;color:var(--mute)">${jrEscHtml(r.when)}</td>
   </tr>`).join(''):emptyRow(5);
   retTb.innerHTML=rList.length?rList.map(r=>`<tr>
-    <td style="font-family:var(--mono);font-size:11px">${jrEscHtml(r.code)}</td>
+    <td dir="ltr" style="font-family:var(--mono);font-size:12px;text-align:left;unicode-bidi:isolate">${jrEscHtml(r.code)}</td>
     <td style="font-weight:600">${jrEscHtml(r.store)}</td>
     <td>${jrEscHtml(r.br)}</td>
     <td>${jrEscHtml(r.cap)}</td>
@@ -9821,6 +9824,8 @@ function renderJanzourMonthlyRatesSection(){
     setTxt('jr-m-del-pct','0%');
     setTxt('jr-m-ret-pct','0%');
   }
+  /* جداول الأكواد يجب أن تُحدَّث حتى لو عنصر الأشهر السابقة غير موجود */
+  renderJanzourMonthlyParcelLists(cy,cm);
   if(!hist)return;
   const prev=janzourMonthlyRatesRows.filter(r=>{
     const y=Number(r.year);const mo=Number(r.month);
@@ -9828,7 +9833,6 @@ function renderJanzourMonthlyRatesSection(){
   });
   if(!prev.length){
     hist.innerHTML='<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--mute)">لا سجلات أشهر سابقة</td></tr>';
-    renderJanzourMonthlyParcelLists(cy,cm);
     return;
   }
   hist.innerHTML=prev.map(r=>{
@@ -9846,7 +9850,6 @@ function renderJanzourMonthlyRatesSection(){
       <td><span class="badge b-dim">${rPct}%</span></td>
     </tr>`;
   }).join('');
-  renderJanzourMonthlyParcelLists(cy,cm);
 }
 function reloadJanzourMonthlyRatesUi(showToast){
   const errEl=document.getElementById('jr-monthly-err');
