@@ -1647,14 +1647,14 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <button class="btn btn-ghost btn-sm" onclick="gTab('api-shipments')">طرود API</button>
       </div>
     </div>
-    <p style="font-size:12px;color:var(--mute);margin-bottom:14px">مؤشرات طرود <strong>متاجر جنزور</strong>. القسم الأول: إحصائيات شهرية من جدول <strong>Processed_Parcels</strong> (الحالات: تم التسليم / مخزن مرتجعات) مع ربط <strong>Janzour_Stores</strong> عبر <code dir="ltr" style="font-size:11px">store_id</code>. القسم التالي: تفصيل من <strong>طرود API</strong> ومتابعة الموظفين — <strong>معدل النجاح</strong> = تسليم ÷ (تسليم + مرتجع).</p>
+    <p style="font-size:12px;color:var(--mute);margin-bottom:14px">مؤشرات طرود <strong>متاجر جنزور</strong>. القسم الأول: <strong>إحصائيات شهرية من نفس طرود API</strong> (حالات مُسلَّم / مرتجع) ضمن نطاق متاجر جنزور؛ الشهر يُستخرج من تاريخ التسليم/التحديث في الـ API إن وُجد، وإلا من <strong>تاريخ آخر جلب</strong>. القسم التالي: تفصيل تشغيلي من الطرود ومتابعة الموظفين — <strong>معدل النجاح</strong> = تسليم ÷ (تسليم + مرتجع).</p>
 
     <div class="card" style="margin-bottom:14px;border-right:4px solid var(--gold)">
       <div class="ctitle" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <span>📅 إحصائيات شهرية — جنزور (قاعدة البيانات)</span>
         <button type="button" class="btn btn-pur btn-sm" onclick="reloadJanzourMonthlyRatesUi(true)">↻ تحديث الشهري</button>
       </div>
-      <p style="font-size:11px;color:var(--mute);margin:0 0 12px">تجميع حسب شهر و سنة اعتماداً على <strong>completion_date</strong>؛ فقط الطرود المربوطة بمتاجر جدول Janzour_Stores وبالحالات النهائية المذكورة.</p>
+      <p style="font-size:11px;color:var(--mute);margin:0 0 12px">يُحسب من الطرود المجلوبة من <strong>API المنظومة</strong> بعد «جلب الآن»؛ فقط الطرود ضمن نطاق جنزور وحالتها النهائية <strong>مُسلَّم</strong> أو <strong>مرتجع</strong>.</p>
       <p id="jr-monthly-err" style="display:none;font-size:12px;color:var(--red);margin:0 0 10px"></p>
       <div id="jr-monthly-summary-wrap" class="kgrid" style="margin-bottom:16px">
         <div class="kcard pur"><div class="klbl">الشهر الحالي</div><div class="kval" id="jr-m-period" style="font-size:16px">—</div></div>
@@ -1673,7 +1673,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
           <tbody id="jr-monthly-hist-tbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--mute)">اضغط «تحديث الشهري» أو افتح التبويب مجدداً</td></tr></tbody>
         </table>
       </div>
-      <p style="font-size:10px;color:var(--mute);margin:10px 0 0">تهيئة الخادم: في Supabase → <strong>SQL</strong> → الصق محتوى <code dir="ltr" style="font-size:10px">api/2026_05_09_janzour_monthly_rates.sql</code> → <strong>Run</strong>. إن بقي الخطأ، انتظر دقيقة أو أعد تشغيل المشروع من الإعدادات.</p>
+      <p style="font-size:10px;color:var(--mute);margin:10px 0 0">اختياري لقاعدة بيانات منفصلة: <code dir="ltr" style="font-size:10px">api/2026_05_09_janzour_monthly_rates.sql</code> — الواجهة هنا تعتمد على <strong>API</strong> مباشرة.</p>
     </div>
 
     <div class="card" style="margin-bottom:14px;border-right:3px solid var(--pur)">
@@ -2562,17 +2562,6 @@ async function sbCount(table){
   if(cr){const m=cr.match(/\/(\d+)/);if(m)return parseInt(m[1]);}
   return 0;
 }
-/** Supabase RPC (PostgREST) — e.g. get_janzour_monthly_rates */
-async function sbRpc(fnName,payload){
-  const r=await fetch(`${SB}/rest/v1/rpc/${encodeURIComponent(fnName)}`,{
-    method:'POST',
-    headers:{...H,'Prefer':'return=representation'},
-    body:JSON.stringify(payload||{})
-  });
-  if(!r.ok){const t=await r.text();throw new Error(t||r.statusText);}
-  return r.json();
-}
-
 // ══════════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════════
@@ -7614,6 +7603,10 @@ async function fetchAPIShipments(){
       const rawStatus=r.status||r['الحالة']||'with_driver';
       const clientId=r.client_id||'';
 
+      const completedAtRaw=r.completed_at||r.completedAt||r.delivery_date||r.delivered_at||r.deliveredAt
+        ||r['تاريخ التسليم']||r['تاريخ الاستلام']||r['تاريخ التوصيل']||r['تاريخ اكتمال الطلب']||'';
+      const updatedAtRaw=r.updated_at||r.updatedAt||r.modified_at||r.last_update||r.last_updated_at
+        ||r['تاريخ التحديث']||r['تاريخ آخر تحديث']||'';
       apiShipments.push({
         id:'api_'+code,
         tracking_code:code,
@@ -7633,6 +7626,8 @@ async function fetchAPIShipments(){
         delay_days:days,
         source:'api',
         fetched_at:new Date().toISOString(),
+        completed_at:String(completedAtRaw||'').trim(),
+        updated_at:String(updatedAtRaw||'').trim(),
         rep_commission:null,
         branch_commission:null
       });
@@ -9576,6 +9571,9 @@ function getJanzourAnalyticsPool(){
       client_name: clientName||'—',
       captain: String(api?.captain||api?.driver_name||snap?.captain_name||'').trim(),
       current_branch: String(api?.current_branch||snap?.branch_name||'').trim(),
+      fetched_at: api?.fetched_at||'',
+      completed_at: api?.completed_at||'',
+      updated_at: api?.updated_at||String(cr?.updated_at||cr?.created_at||'').trim(),
       _metricStatus: metricStatus || ''
     });
   }
@@ -9587,10 +9585,50 @@ function jrMonthLabel(y,m){
   const label=JANZOUR_AR_MONTHS[Number(m)]||('شهر '+String(m));
   return`${label} ${y}`;
 }
-async function loadJanzourMonthlyRatesFromDb(){
-  const rows=await sbRpc('get_janzour_monthly_rates',{});
-  janzourMonthlyRatesRows=Array.isArray(rows)?rows:[];
-  return janzourMonthlyRatesRows;
+/** Parse API / DB date strings (ISO or common Arabic-friendly). */
+function parseFlexibleShipmentDate(raw){
+  if(raw==null||raw==='')return null;
+  const s=String(raw).trim();
+  if(!s)return null;
+  const t=Date.parse(s.includes('T')?s:s.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d)/,'$1T$2'));
+  if(Number.isNaN(t))return null;
+  return new Date(t);
+}
+function pickJanzourMonthlyBucketDate(sh){
+  const d=parseFlexibleShipmentDate(sh?.completed_at)
+    ||parseFlexibleShipmentDate(sh?.updated_at)
+    ||parseFlexibleShipmentDate(sh?.completion_date)
+    ||parseFlexibleShipmentDate(sh?.fetched_at);
+  if(d)return d;
+  return new Date();
+}
+/** Monthly rows from same Janzour + API pool as the rest of this tab (no separate DB feed). */
+function buildJanzourMonthlyRatesFromApiLocal(){
+  buildJanzourSet();
+  const pool=getJanzourAnalyticsPool();
+  const buckets=new Map();
+  for(const s of pool){
+    const st=commissionClassifyDR(s._metricStatus||s);
+    if(st!=='d'&&st!=='r')continue;
+    const dt=pickJanzourMonthlyBucketDate(s);
+    const y=dt.getFullYear();
+    const mo=dt.getMonth()+1;
+    const key=`${y}-${mo}`;
+    if(!buckets.has(key)){
+      buckets.set(key,{year:y,month:mo,total_processed:0,delivered_count:0,returned_count:0,delivery_rate_pct:0,return_rate_pct:0});
+    }
+    const b=buckets.get(key);
+    b.total_processed++;
+    if(st==='d')b.delivered_count++;
+    if(st==='r')b.returned_count++;
+  }
+  const rows=[...buckets.values()].map(b=>{
+    const tot=b.total_processed||0;
+    const delivery_rate_pct=tot>0?Math.round(10000*b.delivered_count/tot)/100:0;
+    const return_rate_pct=tot>0?Math.round(10000*b.returned_count/tot)/100:0;
+    return{...b,delivery_rate_pct,return_rate_pct};
+  }).sort((a,b)=>b.year-a.year||b.month-a.month);
+  return rows;
 }
 function renderJanzourMonthlyRatesSection(){
   const errEl=document.getElementById('jr-monthly-err');
@@ -9659,23 +9697,24 @@ function renderJanzourMonthlyRatesSection(){
     </tr>`;
   }).join('');
 }
-async function reloadJanzourMonthlyRatesUi(showToast){
+function reloadJanzourMonthlyRatesUi(showToast){
   const errEl=document.getElementById('jr-monthly-err');
   const hist=document.getElementById('jr-monthly-hist-tbody');
-  if(hist)hist.innerHTML='<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--mute)">جارٍ التحميل…</td></tr>';
+  if(hist)hist.innerHTML='<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--mute)">جارٍ الحساب…</td></tr>';
   try{
-    await loadJanzourMonthlyRatesFromDb();
+    janzourMonthlyRatesRows=buildJanzourMonthlyRatesFromApiLocal();
+    if(errEl){errEl.style.display='none';errEl.textContent='';}
     renderJanzourMonthlyRatesSection();
-    if(showToast)toast('✅ تم تحديث الإحصائيات الشهرية','s');
+    if(showToast)toast('✅ تم تحديث الإحصائيات الشهرية من طرود API','s');
   }catch(e){
     janzourMonthlyRatesRows=null;
     renderJanzourMonthlyRatesSection();
     const msg=String(e&&e.message||e);
     if(errEl){
       errEl.style.display='block';
-      errEl.textContent='تعذّر جلب الإحصائيات الشهرية. نفّذ في Supabase (نفس مشروع الـ URL في الكود) ملف api/2026_05_09_janzour_monthly_rates.sql ثم اضغط «تحديث الشهري». تفاصيل: '+msg.slice(0,280);
+      errEl.textContent='تعذّر حساب الإحصائيات الشهرية. '+msg.slice(0,220);
     }
-    if(showToast)toast('⚠️ فشل تحميل الإحصائيات الشهرية','e');
+    if(showToast)toast('⚠️ فشل حساب الإحصائيات الشهرية','e');
   }
 }
 /** تحديث لوحة «نسب ومعدلات جنزور» (يُستدعى عند فتح التبويب أو بعد تغيير بيانات API) */
@@ -9684,9 +9723,7 @@ function refreshJanzourRatesPanels(){
   const pool=getJanzourAnalyticsPool();
   const el=document.getElementById('jr-cnt');
   if(el)el.textContent=pool.length.toLocaleString('ar-LY')+' طرد في نطاق جنزور';
-  if(document.getElementById('tab-janzour-rates')?.classList.contains('on')){
-    reloadJanzourMonthlyRatesUi(false).catch(()=>{});
-  }
+  reloadJanzourMonthlyRatesUi(false);
   renderJanzourMetricsTable();
   renderJanzourPerformanceOverview();
 }
