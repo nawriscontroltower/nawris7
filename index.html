@@ -7564,19 +7564,29 @@ async function fetchAPIShipments(){
       return;
     }
 
-    const stMap={'مع المندوب':'with_driver','في الشركة':'in_company','delivered':'delivered','مرتجع':'returned','متأخر':'delayed','مؤجلة مع المندوب':'with_driver','تم التسليم':'delivered','محول':'transferred','processed':'delivered','completed':'delivered','معالج':'delivered'};
+    function pickApiShipmentStatus(r){
+      let x=r?.status;
+      if(x!=null&&typeof x==='object')x=x.label||x.name||x.ar||x.ar_label||x.value||x.text||x.title||'';
+      if(x==null||x==='')x=r?.['الحالة']||r?.order_status||r?.parcel_status||r?.shipment_status||r?.case_status;
+      if(x!=null&&typeof x==='object')x=x.label||x.name||String(x.value??'');
+      return String(x??'').replace(/[\u200e\u200f\u061c]/g,'').replace(/\s+/g,' ').trim();
+    }
+    const stMap={'مع المندوب':'with_driver','في الشركة':'in_company','delivered':'delivered','مرتجع':'returned','متأخر':'delayed','مؤجلة مع المندوب':'with_driver','تم التسليم':'delivered','تم تسليم':'delivered','مُسلّم':'delivered','مسلم':'delivered','محول':'transferred','processed':'delivered','completed':'delivered','معالج':'delivered'};
     // Fuzzy status resolver for Arabic statuses
     function resolveStatus(raw){
       if(!raw)return 'with_driver';
-      const s=String(raw).trim();
+      const s=String(raw).trim().replace(/[\u200e\u200f\u061c]/g,'').replace(/\s+/g,' ');
       if(stMap[s])return stMap[s];
       const sl=s.toLowerCase();
       if(sl==='processed'||sl==='completed'||sl==='complete')return 'delivered';
+      // Explicit Arabic delivered (before مندوب / مخزن partials)
+      if((s.includes('تم التسليم')||s.includes('تم تسليم')||s.includes('تم التوصيل')||s.includes('وصل للعميل')
+        ||s.includes('مُسلّم')||s.includes('مسلم'))&&!s.includes('جزئي')&&!s.includes('مرتجع'))return 'delivered';
       // Partial match
       if(s.includes('مرتجع')||s.includes('إرجاع')||s.includes('القاء'))return 'returned';
       if(s.includes('مندوب'))return 'with_driver';
       if(s.includes('شركة')||s.includes('مخزن'))return 'in_company';
-      if(s.includes('تسليم')||s.includes('delivered'))return 'delivered';
+      if((s.includes('تسليم')||s.includes('delivered'))&&!s.includes('جزئي'))return 'delivered';
       if(s.includes('محول')||s.includes('تحويل'))return 'transferred';
       if(s.includes('متأخر')||s.includes('مؤجل'))return 'delayed';
       return s; // Keep original if no match
@@ -7602,7 +7612,7 @@ async function fetchAPIShipments(){
       const currentBranch=String(r.current_branch||r.branch_name||r['الفرع الحالى']||r['الفرع']||'').trim();
       const government=String(r.government||r['المحافظة']||'').trim();
       const area=String(r.area||r.region_name||r['المنطقة']||'').trim();
-      const rawStatus=r.status||r['الحالة']||'with_driver';
+      const rawStatus=pickApiShipmentStatus(r)||'with_driver';
       const clientId=r.client_id||'';
 
       const completedAtRaw=r.completed_at||r.completedAt||r.delivery_date||r.delivered_at||r.deliveredAt
@@ -9515,6 +9525,11 @@ function resolveJanzourOutcome(sh){
   if(sl==='returned')return 'returned';
   // Many parcel APIs use "processed" / "completed" for successful delivery closure.
   if(sl==='delivered'||sl==='processed'||sl==='completed'||sl==='complete')return 'delivered';
+  const ar=String(st).replace(/[\u200e\u200f\u061c]/g,'').replace(/\s+/g,' ');
+  if(ar.includes('مرتجع')||ar.includes('إرجاع')||ar.includes('الغاء')||ar.includes('الإلغاء')||ar.includes('رفض العميل'))return 'returned';
+  if(ar.includes('تم التسليم')||ar.includes('تم تسليم')||ar.includes('تم التوصيل')||ar.includes('وصل للعميل')
+    ||ar.includes('مُسلّم')||ar.includes('مسلم'))return 'delivered';
+  if(ar.includes('تسليم')&&!ar.includes('جزئي')&&!ar.includes('مرتجع'))return 'delivered';
   return st;
 }
 function commissionClassifyDR(shipmentOrStatus){
