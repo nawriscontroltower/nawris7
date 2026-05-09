@@ -1649,6 +1649,18 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
     </div>
     <p style="font-size:12px;color:var(--mute);margin-bottom:14px">مؤشرات طرود <strong>متاجر جنزور</strong>. القسم الأول: <strong>إحصائيات شهرية من نفس طرود API</strong> (حالات مُسلَّم / مرتجع) ضمن نطاق متاجر جنزور؛ الشهر يُستخرج من تاريخ التسليم/التحديث في الـ API إن وُجد، وإلا من <strong>تاريخ آخر جلب</strong>. القسم التالي: تفصيل تشغيلي من الطرود ومتابعة الموظفين — <strong>معدل النجاح</strong> = تسليم ÷ (تسليم + مرتجع).</p>
 
+    <div class="card" style="margin-bottom:14px;border-right:3px solid #0891b2;padding:12px">
+      <div class="ctitle" style="margin-bottom:6px">🏪 متاجر نطاق جنزور (المستخدمة في احتساب النسب)</div>
+      <p style="font-size:11px;color:var(--mute);margin:0 0 10px">الطُرود تُحسب إذا <strong>اسم العميل/المتجر</strong> في API يطابق أحد هذه الأسماء (كلي أو جزئياً). المصدر: جدول <strong>المتاجر</strong> من Supabase عند الرفع؛ وإلا القائمة الافتراضية في الكود.</p>
+      <div class="tw" style="max-height:220px;overflow:auto">
+        <table>
+          <thead><tr><th>#</th><th>اسم المتجر</th><th>ملاحظة</th></tr></thead>
+          <tbody id="jr-stores-scope-tbody"><tr><td colspan="3" style="text-align:center;padding:14px;color:var(--mute)">—</td></tr></tbody>
+        </table>
+      </div>
+      <p style="font-size:11px;color:var(--mute);margin:8px 0 0">العدد: <strong id="jr-stores-scope-count">0</strong> متجر — <button type="button" class="btn btn-ghost btn-sm" onclick="renderJanzourStoresScopeList()">↻ تحديث القائمة</button></p>
+    </div>
+
     <div class="card" style="margin-bottom:14px;border-right:4px solid var(--gold)">
       <div class="ctitle" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <span>📅 إحصائيات شهرية — جنزور (قاعدة البيانات)</span>
@@ -7016,6 +7028,37 @@ function buildJanzourSet(){
   janzourStoreSet=new Set(sourceNames);
   rebuildJanzourShipments();
 }
+/** قائمة عرض أسماء متاجر جنزور (لتبويب النسب) — من Supabase أو البذرة */
+function renderJanzourStoresScopeList(){
+  const tb=document.getElementById('jr-stores-scope-tbody');
+  const cnt=document.getElementById('jr-stores-scope-count');
+  if(!tb)return;
+  buildJanzourSet();
+  let names=[];
+  let src='seed';
+  if(typeof stores!=='undefined'&&stores.length){
+    names=stores.map(s=>(s.name||'').trim()).filter(Boolean);
+    src='supabase';
+  }else{
+    names=JANZOUR_STORES_SEED.map(n=>n.trim()).filter(Boolean);
+  }
+  const seen=new Set();
+  names=names.filter(n=>{
+    const k=n.toLowerCase();
+    if(seen.has(k))return false;
+    seen.add(k);
+    return true;
+  });
+  names.sort((a,b)=>a.localeCompare(b,'ar'));
+  if(cnt)cnt.textContent=String(names.length);
+  const note=src==='supabase'?'من جدول المتاجر (Supabase)':'قائمة افتراضية — ارفع متاجر من تبويب الرفع';
+  tb.innerHTML=names.length?names.map((n,i)=>`<tr>
+    <td style="font-family:var(--mono)">${i+1}</td>
+    <td style="font-weight:700">${String(n).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}</td>
+    <td style="font-size:10px;color:var(--mute)">${note}</td>
+  </tr>`).join('')
+    :`<tr><td colspan="3" style="text-align:center;padding:14px;color:var(--mute)">لا توجد متاجر — حمّل ملف المتاجر من <strong>رفع البيانات</strong> ثم اضغط «تحديث القائمة»</td></tr>`;
+}
 function rebuildJanzourShipments(){
   janzourShipments=apiShipments.filter(s=>{
     const name=(s.client_name||'').trim().toLowerCase();
@@ -9831,6 +9874,7 @@ function refreshJanzourRatesPanels(){
   const pool=getJanzourAnalyticsPool();
   const el=document.getElementById('jr-cnt');
   if(el)el.textContent=pool.length.toLocaleString('ar-LY')+' طرد في نطاق جنزور';
+  try{renderJanzourStoresScopeList();}catch(_){}
   reloadJanzourMonthlyRatesUi(false);
   renderJanzourMetricsTable();
   renderJanzourPerformanceOverview();
