@@ -7564,12 +7564,14 @@ async function fetchAPIShipments(){
       return;
     }
 
-    const stMap={'مع المندوب':'with_driver','في الشركة':'in_company','delivered':'delivered','مرتجع':'returned','متأخر':'delayed','مؤجلة مع المندوب':'with_driver','تم التسليم':'delivered','محول':'transferred'};
+    const stMap={'مع المندوب':'with_driver','في الشركة':'in_company','delivered':'delivered','مرتجع':'returned','متأخر':'delayed','مؤجلة مع المندوب':'with_driver','تم التسليم':'delivered','محول':'transferred','processed':'delivered','completed':'delivered','معالج':'delivered'};
     // Fuzzy status resolver for Arabic statuses
     function resolveStatus(raw){
       if(!raw)return 'with_driver';
       const s=String(raw).trim();
       if(stMap[s])return stMap[s];
+      const sl=s.toLowerCase();
+      if(sl==='processed'||sl==='completed'||sl==='complete')return 'delivered';
       // Partial match
       if(s.includes('مرتجع')||s.includes('إرجاع')||s.includes('القاء'))return 'returned';
       if(s.includes('مندوب'))return 'with_driver';
@@ -9509,7 +9511,10 @@ function janzourOutcomeFromNote(note){
 function resolveJanzourOutcome(sh){
   if(!sh) return '';
   const st=(typeof sh==='string')?sh:String(sh.status||'').trim();
-  if(st==='delivered'||st==='returned') return st;
+  const sl=String(st).toLowerCase();
+  if(sl==='returned')return 'returned';
+  // Many parcel APIs use "processed" / "completed" for successful delivery closure.
+  if(sl==='delivered'||sl==='processed'||sl==='completed'||sl==='complete')return 'delivered';
   return st;
 }
 function commissionClassifyDR(shipmentOrStatus){
