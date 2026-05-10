@@ -5705,23 +5705,31 @@ const PROXY='https://misty-wildflower-54d1.medodaw519.workers.dev';
 async function apiFetch(baseUrl,token,cursor){
   const cleanToken=token?token.replace(/^(Bearer|Token)\s*/i,'').trim():'';
   const reqUrl=String(baseUrl||'').trim();
-  // For Algoriza backoffice API, send token exactly as X-API-TOKEN (as required by curl).
+  // Algoriza backoffice: only try same-origin GET (X-API-TOKEN). Cross-origin calls always
+  // fail CORS from hosted UIs (e.g. nawris.nawras-ly.com) and waste a full preflight+round-trip
+  // per request before falling back to the worker proxy — very slow on deep pagination.
   if(reqUrl.includes('backoffice.nawris.algoriza.com')){
+    let canDirect=false;
     try{
-      const u=new URL(reqUrl,window.location.origin);
-      if(cursor)u.searchParams.set('cursor',String(cursor));
-      const directRes=await fetch(u.toString(),{
-        method:'GET',
-        headers:{
-          'Accept':'application/json',
-          ...(cleanToken?{'X-API-TOKEN':cleanToken}:{})
-        },
-        credentials:'omit'
-      });
-      // Some environments reject direct calls; fallback to proxy for resiliency.
-      if(directRes.ok)return directRes;
-      if(directRes.status!==401)return directRes;
+      const apiOrigin=new URL(reqUrl,window.location.origin).origin;
+      canDirect=apiOrigin===window.location.origin;
     }catch(_){}
+    if(canDirect){
+      try{
+        const u=new URL(reqUrl,window.location.origin);
+        if(cursor)u.searchParams.set('cursor',String(cursor));
+        const directRes=await fetch(u.toString(),{
+          method:'GET',
+          headers:{
+            'Accept':'application/json',
+            ...(cleanToken?{'X-API-TOKEN':cleanToken}:{})
+          },
+          credentials:'omit'
+        });
+        if(directRes.ok)return directRes;
+        if(directRes.status!==401)return directRes;
+      }catch(_){}
+    }
   }
   const body={url:reqUrl,token:cleanToken};
   if(cursor)body.cursor=cursor;
