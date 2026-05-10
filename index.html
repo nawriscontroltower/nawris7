@@ -2939,17 +2939,34 @@ async function fetchAllBranchDelayedRows(baseUrl,token,minDelay){
   let nextCursor='';
   let page=0;
   const MAX_PAGES=300;
-  do{
-    page++;
+  const fetchOnePageJson=async()=>{
     const u=new URL(cleanBase,window.location.origin);
     u.searchParams.set('delay_days',String(minDelay));
-    // Cursor only in apiFetch JSON body for the Worker — duplicating it in the URL breaks some proxies/backends.
-    const res=await apiFetch(u.toString(),token,nextCursor||'');
-    if(!res.ok){
-      const errBody=await res.text().catch(()=>'');
-      throw new Error(`HTTP ${res.status}${errBody?': '+errBody.slice(0,180):''}`);
+    const baseStr=u.toString();
+    const cur=String(nextCursor||'').trim();
+    const modes=cur?[
+      {url:baseStr,cursor:cur,label:'payload-cursor'},
+      {url:`${baseStr}${baseStr.includes('?')?'&':'?'}cursor=${encodeURIComponent(cur)}`,cursor:'',label:'query-cursor'}
+    ]:[{url:baseStr,cursor:'',label:'first'}];
+    let lastErr=null;
+    for(const m of modes){
+      try{
+        const res=await apiFetch(m.url,token,m.cursor);
+        if(!res.ok){
+          const errBody=await res.text().catch(()=>'');
+          lastErr=new Error(`HTTP ${res.status}${errBody?': '+errBody.slice(0,160):''} (${m.label})`);
+          continue;
+        }
+        return await res.json();
+      }catch(e){
+        lastErr=e;
+      }
     }
-    const json=await res.json();
+    throw lastErr||new Error('تعذّر جلب صفحة API الفروع');
+  };
+  do{
+    page++;
+    const json=await fetchOnePageJson();
     const rows=delayedApiRows(json);
     allRows=allRows.concat(rows||[]);
     nextCursor=delayedApiNextCursor(json);
@@ -5780,14 +5797,14 @@ async function apiFetch(baseUrl,token,cursor){
   return await fetch(PROXY,{
     method:'POST',
     headers:{'Content-Type':'application/json','Accept':'application/json'},
-    body:JSON.stringify(body),
-    redirect:'error'
+    body:JSON.stringify(body)
   });
 }
 function getBranchApiConfig(){
   const defaultUrl='https://backoffice.nawris.algoriza.com/external-api/orders/delayed';
   const url=(document.getElementById('branch-api-url-r')?.value||document.getElementById('branch-api-url-t')?.value||defaultUrl).trim();
-  const token=(document.getElementById('branch-api-token-r')?.value||document.getElementById('branch-api-token-t')?.value||'').trim();
+  let token=(document.getElementById('branch-api-token-r')?.value||document.getElementById('branch-api-token-t')?.value||'').trim();
+  if(!token)token=(document.getElementById('api-token2')?.value||document.getElementById('api-token')?.value||'').trim();
   return {url:url||defaultUrl,token};
 }
 function syncBranchApiInputs(url,token){
