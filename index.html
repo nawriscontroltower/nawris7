@@ -2907,6 +2907,32 @@ async function loadShipments(){
   }catch(e){setSyncState('err','خطأ');toast('خطأ: '+e.message,'e');}
 }
 
+function delayedApiRows(json){
+  if(!json||typeof json!=='object')return[];
+  if(Array.isArray(json))return json;
+  if(Array.isArray(json.data))return json.data;
+  if(Array.isArray(json.data?.orders))return json.data.orders;
+  if(Array.isArray(json.data?.shipments))return json.data.shipments;
+  if(Array.isArray(json.data?.results))return json.data.results;
+  if(Array.isArray(json.results))return json.results;
+  if(Array.isArray(json.orders))return json.orders;
+  if(Array.isArray(json.shipments))return json.shipments;
+  if(Array.isArray(json.data?.data))return json.data.data;
+  if(Array.isArray(json.payload?.data))return json.payload.data;
+  return [];
+}
+function delayedApiNextCursor(json){
+  if(!json||typeof json!=='object')return '';
+  return String(
+    json.meta?.next_cursor||
+    json.next_cursor||
+    json.data?.next_cursor||
+    json.data?.meta?.next_cursor||
+    json.pagination?.next_cursor||
+    json.links?.next_cursor||
+    ''
+  ).trim();
+}
 async function fetchAllBranchDelayedRows(baseUrl,token,minDelay){
   const cleanBase=String(baseUrl||'').replace(/[?&]cursor=[^&]*/g,'').replace(/[?&]$/,'');
   let allRows=[];
@@ -2917,13 +2943,16 @@ async function fetchAllBranchDelayedRows(baseUrl,token,minDelay){
     page++;
     const u=new URL(cleanBase,window.location.origin);
     u.searchParams.set('delay_days',String(minDelay));
-    if(nextCursor)u.searchParams.set('cursor',String(nextCursor));
+    // Cursor only in apiFetch JSON body for the Worker — duplicating it in the URL breaks some proxies/backends.
     const res=await apiFetch(u.toString(),token,nextCursor||'');
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    if(!res.ok){
+      const errBody=await res.text().catch(()=>'');
+      throw new Error(`HTTP ${res.status}${errBody?': '+errBody.slice(0,180):''}`);
+    }
     const json=await res.json();
-    const rows=Array.isArray(json)?json:(Array.isArray(json?.data)?json.data:json?.orders||json?.shipments||[]);
+    const rows=delayedApiRows(json);
     allRows=allRows.concat(rows||[]);
-    nextCursor=json?.meta?.next_cursor||json?.next_cursor||'';
+    nextCursor=delayedApiNextCursor(json);
     if(!(rows&&rows.length))break;
   }while(nextCursor&&page<MAX_PAGES);
   return allRows;
@@ -2990,12 +3019,14 @@ async function loadReturns(){
 async function loadTransfers(){
   const cfg=getBranchApiConfig();
   const EXTERNAL_DELAYED_API=cfg.url;
-  const MIN_TRANSFER_DELAY=3;
+  const MIN_TRANSFER_DELAY=2;
   const table=document.getElementById('transfers-table');
   if(table)table.innerHTML='<div class="branch-skeleton"></div><div class="branch-skeleton"></div><div class="branch-skeleton"></div>';
   try{
     setBranchApiStatus('⏳ جارٍ جلب بيانات "التحويلات"...');
-    // Transfers follow-up: start delay from 3 days.
+    if(!String(cfg.token||'').trim()){
+      throw new Error('لم يُحفظ X-API-TOKEN لربط الفروع — استخدم زر «ربط متابعة الفروع» وأدخل التوكن');
+    }
     const token=cfg.token;
     const apiRows=await fetchAllBranchDelayedRows(EXTERNAL_DELAYED_API,token,MIN_TRANSFER_DELAY);
     const normTransferStatus=r=>{
@@ -3091,6 +3122,9 @@ async function loadTransfers(){
   }catch(e){
     console.warn('transfers api',e);
     try{
+      sessionStorage.removeItem('tf_prev_active_codes');
+    }catch(_){}
+    try{
       // Fallback keeps tab usable if Laravel endpoint is unavailable.
       const legacy=await sb('transfers','GET',null,'?select=*,shipments(tracking_code,customer_name),from_branch:branches!from_branch_id(name),to_branch:branches!to_branch_id(name)&order=created_at.desc&limit=500');
       transfers_data=legacy.map(t=>({
@@ -3114,7 +3148,7 @@ async function loadTransfers(){
       const branchSel=document.getElementById('t-branch');if(branchSel)delete branchSel.dataset.ready;
       renderTransfers();
       const conn=document.getElementById('transfers-conn-badge');if(conn){conn.className='badge b-gold';conn.textContent='⚠️ Fallback';}
-      setBranchApiStatus(`⚠️ التحويلات: fallback محلي (${transfers_data.length} سجل)`,`info`);
+      setBranchApiStatus(`⚠️ التحويلات: fallback محلي (${transfers_data.length} سجل) — ${String(e.message||e).slice(0,140)}`,`info`);
     }catch(err){
       console.warn('transfers fallback',err);
       if(table)table.innerHTML='<div class="tr-error">❌ تعذر تحميل التحويلات</div>';
@@ -4846,7 +4880,11 @@ function renderTransfers(){
   // "Processed" = codes that were present on last successful render but missing now (not lifetime tf_seen_codes — that grew unbounded and broke KPIs).
   let prevActiveSnap=[];
   try{prevActiveSnap=JSON.parse(sessionStorage.getItem('tf_prev_active_codes')||'[]');}catch{prevActiveSnap=[];}
-  const tfDisappeared=prevActiveSnap.filter(tc=>tc&&!currentTransferCodes.has(tc));
+  let tfDisappeared=prevActiveSnap.filter(tc=>tc&&!currentTransferCodes.has(tc));
+  if(!transfers_data.length&&tfDisappeared.length>500){
+    tfDisappeared=[];
+    try{sessionStorage.removeItem('tf_prev_active_codes');}catch(_){}
+  }
   const showTransferProcessed=!!document.getElementById('t-show-processed-mode')?.dataset?.active;
 
   const setTxt=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=String(val);};
