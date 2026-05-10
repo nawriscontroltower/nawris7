@@ -7516,23 +7516,36 @@ async function fetchAPIShipments(){
     const MAX_PAGES=500; // safety limit for very large APIs
     const delayOfRaw=(it)=>parseInt(it?.delay_days||it?.[delayField]||it?.delay||0)||0;
 
-    const appendUniqueItems=(items)=>{
+    const appendUniqueItemsToMap=(map,items)=>{
       let newKeys=0;
       for(const item of items){
         const code=pickTrackingCode(item,newKeys);
         if(!code)continue;
-        const prev=rawByCode.get(code);
+        const prev=map.get(code);
         if(!prev){
-          rawByCode.set(code,item);
+          map.set(code,item);
           newKeys++;
           continue;
         }
-        if(delayOfRaw(item)>delayOfRaw(prev))rawByCode.set(code,item);
+        if(delayOfRaw(item)>delayOfRaw(prev))map.set(code,item);
       }
       return newKeys;
     };
+    const mergeDelayAwareMaps=(dest,src)=>{
+      if(!src||!src.size)return;
+      for(const item of src.values()){
+        const code=pickTrackingCode(item,0);
+        if(!code)continue;
+        const prev=dest.get(code);
+        if(!prev){
+          dest.set(code,item);
+          continue;
+        }
+        if(delayOfRaw(item)>delayOfRaw(prev))dest.set(code,item);
+      }
+    };
 
-    const fetchAllPagesForBase=async(baseUrl,label)=>{
+    const fetchAllPagesForBase=async(baseUrl,label,targetMap=rawByCode)=>{
       let nextCursor=null;
       let nextPageUrl='';
       let pageNum=0;
@@ -7557,14 +7570,17 @@ async function fetchAPIShipments(){
           }
           seenCursors.add(cursorForPage);
         }
-        if(el)el.textContent=`⏳ ${label} — صفحة ${pageNum}... [${rawByCode.size} طرد]`;
+        if(el){
+          const cnt=targetMap===rawByCode?String(targetMap.size):`${rawByCode.size} + ${targetMap.size}`;
+          el.textContent=`⏳ ${label} — صفحة ${pageNum}... [${cnt} طرد]`;
+        }
 
         let pageResult=null;
         try{
           pageResult=await fetchPageWithRetry(pageUrl,cursorForPage,2);
         }catch(fetchErr){
           // Don't fully block users if later pages fail (e.g. unstable cursor modes / server 500).
-          if(rawByCode.size>0){
+          if(targetMap.size>0){
             console.warn(`Pagination warning (${label}): stopped at page ${pageNum} due to ${fetchErr?.message||fetchErr}`);
             break;
           }
@@ -7575,8 +7591,8 @@ async function fetchAPIShipments(){
         nextCursor=getNextCursor(json)||null;
         nextPageUrl=getNextPageUrl(json,pageUrl)||getNextPageByNumber(json,pageUrl)||'';
         dayRawCount+=pageData.length;
-        const newCount=appendUniqueItems(pageData);
-        console.log(`${label} | Page ${pageNum}: ${pageData.length} items, ${newCount} new keys, total: ${rawByCode.size}, next_cursor: ${nextCursor?'yes':'no'}, next_url: ${nextPageUrl?'yes':'no'}, via: ${pageResult.mode}`);
+        const newCount=appendUniqueItemsToMap(targetMap,pageData);
+        console.log(`${label} | Page ${pageNum}: ${pageData.length} items, ${newCount} new keys, total: ${targetMap.size}, next_cursor: ${nextCursor?'yes':'no'}, next_url: ${nextPageUrl?'yes':'no'}, via: ${pageResult.mode}`);
 
         if(!pageData.length)break;
       }while((nextPageUrl||nextCursor)&&pageNum<MAX_PAGES);
@@ -7600,11 +7616,19 @@ async function fetchAPIShipments(){
     if(rawByCode.size>0){
       const sizeBefore=rawByCode.size;
       const sweepDelays=[400,350,300,250,200,150,100,75,60,50,40,35,30,25,20,15,10,7,5,4,3].filter(d=>d!==startDelay);
-      if(el)el.textContent=`⏳ جلب دفعات إضافية (${sweepDelays.length} عتبة تأخير)…`;
-      for(const d of sweepDelays){
-        const sweepUrl=new URL(parsedBaseUrl.toString());
-        sweepUrl.searchParams.set('delay_days',String(d));
-        await fetchAllPagesForBase(sweepUrl.toString(),`تأخير ${d}ي`);
+      const SWEEP_CONCURRENCY=3;
+      for(let i=0;i<sweepDelays.length;i+=SWEEP_CONCURRENCY){
+        const batch=sweepDelays.slice(i,i+SWEEP_CONCURRENCY);
+        const hi=Math.min(i+batch.length,sweepDelays.length);
+        if(el)el.textContent=`⏳ جلب دفعات إضافية (${i+1}–${hi} من ${sweepDelays.length} عتبة)…`;
+        const locals=await Promise.all(batch.map(async d=>{
+          const sweepUrl=new URL(parsedBaseUrl.toString());
+          sweepUrl.searchParams.set('delay_days',String(d));
+          const localMap=new Map();
+          await fetchAllPagesForBase(sweepUrl.toString(),`تأخير ${d}ي`,localMap);
+          return localMap;
+        }));
+        for(const lm of locals)mergeDelayAwareMaps(rawByCode,lm);
       }
       const newFromSweep=rawByCode.size-sizeBefore;
       if(newFromSweep>0)console.log(`[API SWEEP] Found ${newFromSweep} additional shipments from delay sweep`);
