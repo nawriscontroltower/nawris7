@@ -2998,21 +2998,42 @@ async function loadTransfers(){
     // Transfers follow-up: start delay from 3 days.
     const token=cfg.token;
     const apiRows=await fetchAllBranchDelayedRows(EXTERNAL_DELAYED_API,token,MIN_TRANSFER_DELAY);
+    const normTransferStatus=r=>{
+      const x=r?.status;
+      let t='';
+      if(x!=null&&typeof x==='object')t=String(x.label||x.name||x.ar||x.ar_label||x.value||x.text||x.title||x.status||'');
+      else t=String(x??'');
+      return t.replace(/[\u200e\u200f\u061c]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+    };
+    const pickBr=(r,...keys)=>{
+      for(const k of keys){
+        const v=r?.[k];
+        const s=String(v==null?'':v).trim();
+        if(s)return s;
+      }
+      return '';
+    };
     const transferRows=apiRows.filter(r=>{
       const d=parseInt(r?.delay_days||r?.delay||0)||0;
-      const s=String(r?.status||'').toLowerCase();
-      const prevBranch=String(r?.previous_branch||'').trim();
-      const recvBranch=String(r?.received_branch||'').trim();
-      const hasBothBranches=Boolean(prevBranch&&recvBranch);
-      const isToBranchTransit=
-        s.includes('بالطريق للفرع')||
+      const s=normTransferStatus(r);
+      const prevBranch=pickBr(r,'previous_branch','from_branch','source_branch','origin_branch','sender_branch');
+      const recvBranch=pickBr(r,'received_branch','to_branch','destination_branch','target_branch','next_branch','receiver_branch');
+      const currentBranch=pickBr(r,'current_branch','branch_name','branch');
+      const hasTwoEndpoints=Boolean(
+        (prevBranch&&recvBranch)||
+        (prevBranch&&currentBranch&&prevBranch!==currentBranch)||
+        (recvBranch&&currentBranch&&recvBranch!==currentBranch)
+      );
+      const isTerminal=
+        s.includes('تم التسليم')||s.includes('تم تسليم')||s.includes('delivered')||s.includes('مسلم')||
+        s.includes('مرتجع')||s.includes('return')||s.includes('cancel');
+      const isToBranchTransit=!isTerminal&&(
+        /طريق|تحويل|نقل|routing|route|transit|transfer|between|inter[_-]?branch|on[_-]?the[_-]?way|in[_-]?transit|branch[_-]?to[_-]?branch/.test(s)||
         s.includes('بالطريق')||
-        s.includes('in_transit')||
-        s.includes('on_the_way')||
-        s.includes('route_to_branch')||
-        s.includes('to_branch');
-      // Transfers tab should show only branch-to-branch in-transit records.
-      return d>=MIN_TRANSFER_DELAY&&hasBothBranches&&isToBranchTransit;
+        s.includes('للفرع')||
+        (s.includes('فرع')&&s.includes('طريق'))
+      );
+      return d>=MIN_TRANSFER_DELAY&&hasTwoEndpoints&&isToBranchTransit;
     });
     transfers_data=transferRows.map((r,i)=>{
       const shipmentCode=String(
@@ -4794,6 +4815,7 @@ function setTransfersSort(key){
 function renderTransfers(){
   const container=document.getElementById('transfers-table');
   if(!container)return;
+  try{
   const q=normalizeIdentityText(document.getElementById('t-q')?.value||'');
   const fromBranchFilter=(document.getElementById('t-from-branch')?.value||'').trim();
   const toBranchFilter=(document.getElementById('t-to-branch')?.value||'').trim();
@@ -4821,10 +4843,10 @@ function renderTransfers(){
     localStorage.setItem('tf_seen_codes',JSON.stringify(merged));
   }catch{}
   _syncProcessedToSupabase();
-  // Find disappeared codes
-  let tfSeenBefore=[];
-  try{tfSeenBefore=JSON.parse(localStorage.getItem('tf_seen_codes')||'[]');}catch{}
-  const tfDisappeared=tfSeenBefore.filter(tc=>!currentTransferCodes.has(tc));
+  // "Processed" = codes that were present on last successful render but missing now (not lifetime tf_seen_codes — that grew unbounded and broke KPIs).
+  let prevActiveSnap=[];
+  try{prevActiveSnap=JSON.parse(sessionStorage.getItem('tf_prev_active_codes')||'[]');}catch{prevActiveSnap=[];}
+  const tfDisappeared=prevActiveSnap.filter(tc=>tc&&!currentTransferCodes.has(tc));
   const showTransferProcessed=!!document.getElementById('t-show-processed-mode')?.dataset?.active;
 
   const setTxt=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=String(val);};
@@ -4962,6 +4984,12 @@ function renderTransfers(){
     return;
   }
   container.appendChild(frag);
+  }finally{
+    try{
+      const snap=[...new Set(transfers_data.map(s=>String(s.shipment_code||s.tracking_code||'').trim()).filter(Boolean))];
+      sessionStorage.setItem('tf_prev_active_codes',JSON.stringify(snap));
+    }catch(_){}
+  }
 }
 async function updateTransfer(id,status){
   try{
