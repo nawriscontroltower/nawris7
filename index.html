@@ -7743,6 +7743,13 @@ async function fetchAPIShipments(){
         ||s.includes('مُسلّم')||s.includes('مسلم'))&&!s.includes('جزئي')&&!s.includes('مرتجع'))return 'delivered';
       // Partial match
       if(s.includes('مرتجع')||s.includes('إرجاع')||s.includes('القاء'))return 'returned';
+      // طرود بين الفروع / في الطريق للفرع — ليست «مع المندوب» (تُعرض في متابعة الفروع/التحويلات)
+      if(s.includes('بالطريق')||s.includes('للفرع')||s.includes('طريق للفرع')||(s.includes('طريق')&&s.includes('فرع'))
+        ||/in_transit|on_the_way|route.*branch|between.*branch/i.test(sl))return 'transferred';
+      if(sl==='with_driver'||sl==='assigned'||sl==='out_for_delivery')return 'with_driver';
+      if(sl==='returned'||sl==='return')return 'returned';
+      if(sl==='in_company'||sl==='in warehouse'||sl==='warehouse')return 'in_company';
+      if(sl==='transferred'||sl.includes('transit'))return 'transferred';
       if(s.includes('مندوب'))return 'with_driver';
       if(s.includes('شركة')||s.includes('مخزن'))return 'in_company';
       if((s.includes('تسليم')||s.includes('delivered'))&&!s.includes('جزئي'))return 'delivered';
@@ -7802,6 +7809,11 @@ async function fetchAPIShipments(){
         rep_commission:null,
         branch_commission:null
       });
+    }
+    const _apiScopeBefore=apiShipments.length;
+    apiShipments=apiShipments.filter(s=>s.status==='with_driver'||s.status==='returned');
+    if(_apiScopeBefore!==apiShipments.length){
+      console.log(`[API SCOPE] طرود الصفحة: مع المندوب + مرتجع فقط — أُسقط ${_apiScopeBefore-apiShipments.length} من أصل ${_apiScopeBefore} (شركة / تحويل / تسليم / أخرى)`);
     }
     try{
       const mappedRCodes=apiShipments
@@ -7864,7 +7876,7 @@ async function fetchAPIShipments(){
     localStorage.setItem('api_fetch_log',JSON.stringify(apiFetchLog));
 
     // Update UI
-    if(el)el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${apiShipments.length} طرد — ${new Date().toLocaleTimeString('ar-LY')}</span>`;
+    if(el)el.innerHTML=`<span style="color:var(--grn)">✅ تم جلب ${apiShipments.length} طرد (مع المندوب + مرتجع) — ${new Date().toLocaleTimeString('ar-LY')}</span>`;
     if(dot)dot.className='sync-dot';
     if(stEl)stEl.textContent='متصل — '+apiShipments.length+' طرد';
     const apiLastFetchEl=document.getElementById('api-last-fetch');
@@ -7908,7 +7920,7 @@ async function fetchAPIShipments(){
     buildJanzourSet();
     refreshJanzourRatesPanels();
     if(document.getElementById('tab-janzour')?.classList.contains('on'))renderJanzour();
-    toast(`✅ ${apiShipments.length} طرد من API — جنزور: ${janzourShipments.length} طرد`,'s');
+    toast(`✅ ${apiShipments.length} طرد (مع المندوب + مرتجع) — جنزور: ${janzourShipments.length}`,'s');
 
   }catch(e){
     if(el)el.innerHTML=`<span style="color:var(--red)">❌ ${e.message}</span>`;
