@@ -1156,7 +1156,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <span id="returns-conn-badge" class="badge b-grn">✅ Connected</span>
         <span id="returns-last-sync" class="branch-sync">آخر مزامنة: —</span>
       </div>
-      <div id="branch-api-status-r" style="font-size:11px;color:var(--mute);margin-top:6px">API متابعة الفروع مستقل عن API الطرود</div>
+      <div id="branch-api-status-r" style="font-size:11px;color:var(--mute);margin-top:6px">رابط وتوكن الفروع يُحفظان منفصلان عن تبويب الطرود (مفاتيح branch_api_* في الإعدادات). الاتصال يمر عبر نفس البروكسي فقط لتجاوز CORS — لم يُبدّل مسار البيانات.</div>
     </div>
     <div class="branch-kpis">
       <div class="branch-kpi total"><div>إجمالي الشحنات</div><strong id="r-kpi-total">0</strong></div>
@@ -1250,7 +1250,7 @@ body:has(#staging-banner) #login-screen{padding-top:32px}
         <span id="transfers-conn-badge" class="badge b-grn">✅ Connected</span>
         <span id="transfers-last-sync" class="branch-sync">آخر مزامنة: —</span>
       </div>
-      <div id="branch-api-status-t" style="font-size:11px;color:var(--mute);margin-top:6px">هذا الربط خاص بفي الشركة + التحويلات</div>
+      <div id="branch-api-status-t" style="font-size:11px;color:var(--mute);margin-top:6px">نفس ربط الفروع أعلاه (في الشركة + التحويلات). الرابط/التوكن منفصلان عن API الطرود؛ البروكسي مشترك تقنياً فقط.</div>
     </div>
     <div class="branch-kpis">
       <div class="branch-kpi total"><div>إجمالي الشحنات</div><strong id="t-kpi-total">0</strong></div>
